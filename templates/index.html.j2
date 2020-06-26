@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta charset="utf-8">
+        <!-- Tocas UI：CSS 與元件 -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.css">
+        <!-- Tocas JS：模塊與 JavaScript 函式 -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.js"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    </head>
+    <title>EPUB Convert</title>
+    <body>
+        <form action="/api/convert" method="post" enctype="multipart/form-data" name="form" id="form">
+            <input type="file" name="upload" id="upload" accept=".epub" />
+        </form>
+        <div class="ts center aligned big header">
+            EPUB Convert
+        </div>
+        <div class="ts container" id="main">
+            <div class="ts basic padded dashed clickable slate" id="dragzone" data-mode="selecting">
+                <button class="ts close button"></button>
+                <i class="upload symbol icon"></i>
+                <span class="header">上傳</span>
+                <span class="description">將檔案拖拉至此處進行上傳，或是點擊此處選取檔案。<br>Max upload size : {{ limit_human_readable }}</span>
+                <div class="action">
+                    <button class="ts primary button" id="submitbtn">Upload</button>
+                    <a class="ts positive button" id="downloadbtn">Download</a>
+                    <div class="ts progress" id="progressbar">
+                        <div class="bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="ts padded attached center aligned inverted segment">
+            <p>Convert simplified chinese to traditional chinese in epub.</p>
+            <p>&copy; Stone App | <a href="https://github.com/stoneapptech/epub_convert">GitHub Repo</a></p>
+        </footer>
+        <!-- snackbar -->
+        <div class="ts top right snackbar">
+            <div class="content"></div>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js"></script>
+        <script>
+            const sizeLimit = {{ limit }};
+        </script>
+        <script src="{{ url_for('static', filename='upload.js') }}"></script>
+    </body>
+</html>

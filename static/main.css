@@ -1,0 +1,52 @@
+body, html {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body, #main {
+    display: flex;
+    flex-direction: column;
+}
+
+.close.button {
+    position: absolute;
+    z-index: 3;
+    right: 2em;
+    top: 2em;
+}
+
+#dragzone[data-mode="selecting"] .close.button,
+#dragzone:not([data-mode="selected"]) #submitbtn,
+#dragzone:not([data-mode="converted"]) #downloadbtn,
+#dragzone:not([data-mode^="upload"]) .ts.progress {
+    display: none;
+}
+
+#main {
+    flex: 1;
+    flex-grow: 1;
+    justify-content: center;
+}
+
+#dragzone {
+    margin-bottom: 1em;
+}
+
+#progressbar .bar {
+    min-width: 0;
+}
+
+#upload {
+    visibility: hidden;
+    height: 0;
+    width: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#submit {
+    z-index: 5;
+}
