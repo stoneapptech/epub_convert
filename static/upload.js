@@ -154,6 +154,7 @@ dqs("#submitbtn").on("click", ev => {
             ts(".snackbar").snackbar({
                 content: "上傳已取消"
             });
+            dqs("#dragzone").dataset.mode = "selecting";
         } else {
             console.error(e);
         }
