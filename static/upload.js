@@ -10,7 +10,7 @@ HTMLElement.prototype.on = function(event, callback) {
     return this;
 }
 
-function updateFile(files) {
+function updateFile(files, syncWithInput=true) {
     let filename = files[0].name;
     let size = files[0].size;
 
@@ -30,7 +30,7 @@ function updateFile(files) {
         return false;
     }
 
-    if (!dqs("#upload").files.length) {
+    if (syncWithInput) {
         dqs("#upload").files = files;
     }
 
@@ -75,7 +75,7 @@ dqs("#upload").on("change", ev => {
                 content: "一次僅可上傳一個檔案。"
             });
         } else {
-            updateFile(el.files);
+            updateFile(el.files, false);
         }
     } else {
         reset();
