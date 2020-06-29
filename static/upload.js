@@ -162,29 +162,15 @@ dqs("#submitbtn").on("click", ev => {
 });
 
 dqs("#dragzone").on("click", ev => {
-    ev.preventDefault();
-
     if (dqs("#dragzone").dataset.mode != "uploading") {
         let allowlist = ["button", "a"];
         if (allowlist.indexOf(ev.target.tagName.toLowerCase()) == -1) {
+            ev.preventDefault();
             dqs("#upload").click();
         }
+    } else {
+        ev.preventDefault();
     }
-});
-
-dqs("#downloadbtn").on("click", ev => {
-    ev.preventDefault();
-    let el = ev.target;
-
-    let link = document.createElement("a");
-    link.setAttribute("download", el.getAttribute("download"));
-    link.style.display = "none";
-    link.href = el.href;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    reset();
 });
 
 dqs("#dragzone").on("drop", ev => {
