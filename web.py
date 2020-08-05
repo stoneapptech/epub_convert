@@ -2,9 +2,8 @@ import tempfile
 import hashlib
 from io import BytesIO
 from flask import (
-    Flask, jsonify, redirect, request, render_template, send_file, url_for, safe_join
+    Flask, jsonify, request, render_template, send_file
 )
-from werkzeug.utils import secure_filename
 from convert import convert_epub, s2t
 from pathlib import Path
 
