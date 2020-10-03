@@ -1,9 +1,5 @@
-import argparse
 import zipfile
 import opencc
-import glob
-import time
-from io import BytesIO
 from pathlib import Path
 
 # only initailize OpenCC once, or it would be very slow
@@ -45,6 +41,11 @@ def s2t(text):
     return converter.convert(text)
 
 if __name__ == "__main__":
+    import argparse
+    import glob
+    import time
+    from io import BytesIO
+
     parser = argparse.ArgumentParser(description="Convert simplified chinese to traditional chinese in epub.")
     parser.add_argument('file', nargs='+', help="epub files")
     args = parser.parse_args()
