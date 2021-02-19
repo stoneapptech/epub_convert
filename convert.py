@@ -58,13 +58,16 @@ if __name__ == "__main__":
     for fn in fn_list:
         if not Path(fn).suffix == ".epub":
             print(f"Skipping file {fn}, which is not an epub document.")
+            continue
         elif fn == s2t(fn):
-            print(f"Skipping file {fn}, which has already been converted.")
+            output_fn = fn[:-5] + '-tc.epub'
         else:
-            t = time.time()
-            print(f"Converting {fn}")
-            buffer = BytesIO()
-            output = convert_epub(fn, buffer)
-            with open(s2t(fn), "wb") as f:
-                f.write(buffer.getvalue())
-            print(f"File {fn} is successfully converted. Time elapsed: {round(time.time() - t, 2)}s")
+            output_fn = s2t(fn)
+        
+        t = time.time()
+        print(f"Converting {fn}")
+        buffer = BytesIO()
+        output = convert_epub(fn, buffer)
+        with open(output_fn, "wb") as f:
+            f.write(buffer.getvalue())
+        print(f"File {fn} is successfully converted. Time elapsed: {round(time.time() - t, 2)}s")
