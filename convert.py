@@ -3,7 +3,7 @@ import opencc
 from pathlib import Path
 
 # only initailize OpenCC once, or it would be very slow
-converter = opencc.OpenCC(config="s2twp.json")
+converter = opencc.OpenCC(config="s2tw.json")
 
 def convert_epub(epub, output=None):
     target_filetype = ["htm", "html", "xhtml", "ncx", "opf"]
@@ -67,7 +67,7 @@ if __name__ == "__main__":
             output_fn = fn[:-5] + '-tc.epub'
         else:
             output_fn = s2t(filename)
-        
+
         t = time.time()
         print(f"Converting {fn}")
         buffer = BytesIO()
