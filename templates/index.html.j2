@@ -16,8 +16,12 @@
         <form action="/api/convert" method="post" enctype="multipart/form-data" name="form" id="form">
             <input type="file" name="upload" id="upload" accept=".epub" />
         </form>
-        <div class="ts center aligned big header">
-            EPUB 簡轉繁
+        <div class="switch-container">
+            <label class="ts-switch">
+                <input type="checkbox" id="theme-switch" />
+                <i class="ts-icon" id="theme-icon"></i>
+            </label>
+        </div>
         <header class="ts-header is-center-aligned is-huge">
             <div class="ts-content is-padded">EPUB 簡轉繁</div>
         </header>
@@ -41,7 +45,7 @@
                                 <div class="bar" style="--value: 0;"></div>
                             </div>
                         </div>
-        </div>
+                    </div>
                     <div class="symbol">
                         <span class="ts-icon is-upload-icon"></span>
                     </div>

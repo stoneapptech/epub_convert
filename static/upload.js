@@ -29,6 +29,44 @@ const ts = () => {
     }
 }
 
+/* switch light/dark theme */
+const match = window.matchMedia("(prefers-color-scheme: dark)");
+if (match.addListener) {
+    match.addListener(switchDarkMode);
+} else {
+    // sad safari
+    match.addEventListener('change', switchDarkMode);
+}
+
+// switch handler
+function switchDarkMode(arg) {
+    let node = document.documentElement;
+    let themeSwitch = dqs("#theme-switch");
+    let themeIcon = dqs("#theme-icon");
+    let darkMode = false;
+
+    if (arg instanceof MediaQueryList || arg instanceof MediaQueryListEvent) {
+        darkMode = arg.matches;
+    } else {
+        darkMode = arg;
+    }
+
+    themeSwitch.checked = !darkMode;
+    themeIcon.classList.toggle("is-sun-icon", !darkMode);
+    themeIcon.classList.toggle("is-moon-icon", darkMode);
+
+    // apply scheme to <html> for tocas-ui
+    node.dataset.scheme = darkMode ? "dark" : "light";
+}
+
+// add event listener for theme switch
+dqs("#theme-switch").on("change", (ev) => {
+    switchDarkMode(!(document.documentElement.dataset.scheme == "dark"));
+});
+
+// run first
+switchDarkMode(match);
+
 /**
  * Change file info and also setup `<input>` files
  * @param {FileList} files - files to apply, only first file is used
@@ -163,7 +201,7 @@ dqs("#submitbtn").on("click", ev => {
         if (filename.startsWith("UTF-8''")) {
             filename = decodeURIComponent(filename.slice(7, filename.length));
         }
-        dqs("#downloadbtn").href = window.URL.createObjectURL(blob); 
+        dqs("#downloadbtn").href = window.URL.createObjectURL(blob);
         dqs("#downloadbtn").setAttribute("download", filename);
     }).catch(function (e) {
         dqs("#dragzone").dataset.mode = "uploadend";

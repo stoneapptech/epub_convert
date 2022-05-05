@@ -12,11 +12,23 @@ body {
     background-color: var(--ts-gray-50);
 }
 
-.close.button {
-    position: absolute;
+/* transition */
+body, .ts-box, footer.ts-content, .ts-progress, .ts-close {
+    transition: background-color .25s ease, border-color .25s ease;
+}
+
+.ts-text, .ts-header, i.ts-icon, .ts-close {
+    transition: color .25s ease;
+}
+
+/* theme switch */
+.switch-container {
+    position: fixed;
+    top: 0;
+    right: 0;
     z-index: 3;
-    right: 2em;
-    top: 2em;
+    padding: .1em .25em;
+    vertical-align: middle;
 }
 
 /* enable/disable element for specific mode */
