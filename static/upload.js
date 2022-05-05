@@ -29,6 +29,11 @@ const ts = () => {
     }
 }
 
+/**
+ * Change file info and also setup `<input>` files
+ * @param {FileList} files - files to apply, only first file is used
+ * @param {boolean} syncWithInput - set `<input>` files, default: true
+ */
 function updateFile(files, syncWithInput=true) {
     let filename = files[0].name;
     let size = files[0].size;
