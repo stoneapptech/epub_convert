@@ -1,10 +1,22 @@
 const CancelToken = axios.CancelToken;
 let cancel;
 
+/**
+ * document query selector
+ * @param {*} selector - select
+ * @param {*} ctx - context
+ * @returns {HTMLElement} ctx.querySelector(selector)
+ */
 const dqs = (selector, ctx = document) => {
     return ctx.querySelector(selector);
 }
 
+/**
+ * alias for addEventListener
+ * @param {*} event - event name
+ * @param {*} callback - event callback
+ * @returns {HTMLElement} this
+ */
 HTMLElement.prototype.on = function(event, callback) {
     this.addEventListener(event, callback);
     return this;
@@ -30,6 +42,8 @@ function updateFile(files, syncWithInput=true) {
         return false;
     }
 
+    // if this function is called due to <input>.onchange, then we should not set it again
+    // or it would be cleared on firefox
     if (syncWithInput) {
         dqs("#upload").files = files;
     }
@@ -39,6 +53,10 @@ function updateFile(files, syncWithInput=true) {
     dqs("#dragzone").dataset.mode = "selected";
 }
 
+/**
+ * Reset info and `<input>`
+ * @param {Event?} ev - If called by event listener, then it would clear its default behavior
+ */
 function reset(ev) {
     if (ev) {
         ev.preventDefault();
@@ -162,6 +180,7 @@ dqs("#submitbtn").on("click", ev => {
 });
 
 dqs("#dragzone").on("click", ev => {
+    // if it is uploading, we dont have to deal with dragzone click
     if (dqs("#dragzone").dataset.mode != "uploading") {
         let allowlist = ["button", "a"];
         if (allowlist.indexOf(ev.target.tagName.toLowerCase()) == -1) {
