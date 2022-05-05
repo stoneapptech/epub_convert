@@ -5,9 +5,11 @@ body, html {
     padding: 0;
 }
 
-body, #main {
+body {
     display: flex;
     flex-direction: column;
+
+    background-color: var(--ts-gray-50);
 }
 
 .close.button {
@@ -17,36 +19,75 @@ body, #main {
     top: 2em;
 }
 
-#dragzone[data-mode="selecting"] .close.button,
+/* enable/disable element for specific mode */
+#dragzone[data-mode="selecting"] .ts-close,
 #dragzone:not([data-mode="selected"]) #submitbtn,
 #dragzone:not([data-mode="converted"]) #downloadbtn,
-#dragzone:not([data-mode^="upload"]) .ts.progress {
+#dragzone:not([data-mode^="upload"]) .ts-progress {
     display: none;
 }
 
+/* main elements */
 #main {
     flex: 1;
     flex-grow: 1;
-    justify-content: center;
 }
 
 #dragzone {
     margin-bottom: 1em;
 }
 
-#progressbar .bar {
-    min-width: 0;
-}
-
-#upload {
+#form {
     visibility: hidden;
     height: 0;
     width: 0;
     position: absolute;
     top: 0;
     left: 0;
+
+    overflow: hidden;
 }
 
-#submit {
-    z-index: 5;
+/* link */
+.ts-text.is-link.is-link.is-link {
+    color: var(--ts-primary-500);
+}
+
+/* button */
+.ts-button.is-primary {
+    background-color: var(--ts-primary-500);
+    border-color: var(--ts-primary-600);
+    color: var(--ts-static-gray-50);
+}
+
+.ts-button.is-positive {
+    background-color: var(--ts-positive-500);
+    border-color: var(--ts-positive-500);
+    color: var(--ts-static-gray-50);
+}
+
+.ts-close {
+    position: absolute;
+    z-index: 3;
+    right: 2em;
+    top: 2em;
+}
+
+#progressbar {
+    width: 100%;
+}
+
+#progressbar .bar {
+    padding: 0;
+    min-width: 0;
+}
+
+/* show processing animation, for the bar is overlapping the animation */
+#progressbar.is-processing .bar {
+    display: none;
+}
+
+/* snackbar */
+.ts-snackbar {
+    display: none;
 }

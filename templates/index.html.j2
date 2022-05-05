@@ -5,9 +5,9 @@
         <meta charset="utf-8">
         <title>EPUB 簡轉繁</title>
         <!-- Tocas UI：CSS 與元件 -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/4.0.3/tocas.css">
         <!-- Tocas JS：模塊與 JavaScript 函式 -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/4.0.3/tocas.js"></script>
         <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
         <meta name="description" content="將簡體 EPUB 轉換為繁體 EPUB 的線上工具。支援拖放上傳，且上傳後即刻開始轉換，數秒內即轉換完成。">
         <meta name="keywords" content="epub,EPUB,chinese,ebook,電子書,簡體,繁體,簡繁轉換,簡轉繁,簡體轉繁體,線上工具">
@@ -18,28 +18,43 @@
         </form>
         <div class="ts center aligned big header">
             EPUB 簡轉繁
+        <header class="ts-header is-center-aligned is-huge">
+            <div class="ts-content is-padded">EPUB 簡轉繁</div>
+        </header>
+        <div class="ts-center" id="main">
+            <div class="ts-space"></div>
+            <div class="ts-container">
+                <div class="ts-box is-hollowed" id="dragzone" data-mode="selecting">
+                    <span class="ts-close"></span>
+                    <div class="ts-content is-very-padded">
+                        <div class="ts-center">
+                            <!-- Header & Description -->
+                            <div class="ts-header is-large">上傳</div>
+                            <div class="ts-text is-center-aligned is-secondary">將檔案拖拉至此處進行上傳，或是點擊此處選取檔案。<br>Max upload size : 20.0 MiB</div>
+
+                            <div class="ts-space"></div>
+
+                            <!-- Buttons / Progress bar -->
+                            <button class="ts-button is-primary" id="submitbtn">Upload</button>
+                            <a class="ts-button is-positive" id="downloadbtn">Download</a>
+                            <div class="ts-progress" id="progressbar">
+                                <div class="bar" style="--value: 0;"></div>
+                            </div>
+                        </div>
         </div>
-        <div class="ts container" id="main">
-            <div class="ts basic padded dashed clickable slate" id="dragzone" data-mode="selecting">
-                <button class="ts close button"></button>
-                <i class="upload symbol icon"></i>
-                <span class="header">上傳</span>
-                <span class="description">將檔案拖拉至此處進行上傳，或是點擊此處選取檔案。<br>Max upload size : {{ limit_human_readable }}</span>
-                <div class="action">
-                    <button class="ts primary button" id="submitbtn">Upload</button>
-                    <a class="ts positive button" id="downloadbtn">Download</a>
-                    <div class="ts progress" id="progressbar">
-                        <div class="bar"></div>
+                    <div class="symbol">
+                        <span class="ts-icon is-upload-icon"></span>
                     </div>
                 </div>
             </div>
+            <div class="ts-space"></div>
         </div>
-        <footer class="ts padded attached center aligned inverted segment">
-            <p>Convert simplified chinese to traditional chinese in epub.</p>
-            <p>&copy; Stone App | <a href="https://github.com/stoneapptech/epub_convert">GitHub Repo</a></p>
+        <footer class="ts-content is-center-aligned is-tertiary">
+            <p class="ts-text">將簡體 EPUB 轉換為繁體 EPUB 的線上工具。支援拖放上傳，且上傳後即刻開始轉換，數秒內即轉換完成。</p>
+            <p class="ts-text">&copy; Stone App | <a class="ts-text is-link" href="https://github.com/stoneapptech/epub_convert">GitHub Repo</a></p>
         </footer>
         <!-- snackbar -->
-        <div class="ts top right snackbar">
+        <div class="ts-snackbar">
             <div class="content"></div>
         </div>
 

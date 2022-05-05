@@ -22,6 +22,13 @@ HTMLElement.prototype.on = function(event, callback) {
     return this;
 }
 
+// TODO: snackbar
+const ts = () => {
+    return {
+        snackbar: (msg) => { console.log(msg); }
+    }
+}
+
 function updateFile(files, syncWithInput=true) {
     let filename = files[0].name;
     let size = files[0].size;
@@ -48,8 +55,8 @@ function updateFile(files, syncWithInput=true) {
         dqs("#upload").files = files;
     }
 
-    dqs(".header", dqs("#dragzone")).textContent = filename;
-    dqs(".description", dqs("#dragzone")).textContent = `檔案大小: ${humanFileSize(size, false)}`;
+    dqs(".ts-header", dqs("#dragzone")).textContent = filename;
+    dqs(".ts-text", dqs("#dragzone")).textContent = `檔案大小: ${humanFileSize(size, false)}`;
     dqs("#dragzone").dataset.mode = "selected";
 }
 
@@ -62,8 +69,8 @@ function reset(ev) {
         ev.preventDefault();
         ev.stopPropagation();
     }
-    dqs(".header", dqs("#dragzone")).textContent = "上傳";
-    dqs(".description", dqs("#dragzone")).innerHTML = "將檔案拖拉至此處進行上傳，或是點擊此處選取檔案。<br>Max upload size : " + humanFileSize(sizeLimit, false);
+    dqs(".ts-header", dqs("#dragzone")).textContent = "上傳";
+    dqs(".ts-text", dqs("#dragzone")).innerHTML = "將檔案拖拉至此處進行上傳，或是點擊此處選取檔案。<br>Max upload size : " + humanFileSize(sizeLimit, false);
     dqs("#dragzone").dataset.mode = "selecting";
     dqs("#upload").value = "";
 }
@@ -100,7 +107,7 @@ dqs("#upload").on("change", ev => {
     }
 });
 
-dqs(".ts.close.button").on("click", ev => {
+dqs(".ts-close").on("click", ev => {
     if (dqs("#dragzone").dataset.mode == "uploading") {
         if (cancel) {
             cancel();
@@ -116,11 +123,11 @@ dqs("#submitbtn").on("click", ev => {
     dqs("#dragzone").dataset.mode = "uploading";
 
     // clean up styles
-    ["preparing", "positive", "negative"].forEach(c => {
+    ["is-processing", "is-negative"].forEach(c => {
         dqs("#progressbar").classList.toggle(c, false);
     });
 
-    dqs("#progressbar .bar").style.width = "0";
+    dqs("#progressbar .bar").style.setProperty("--value", 0);
     if (dqs("#downloadbtn").href) {
         window.URL.revokeObjectURL(dqs("#downloadbtn").href);
         dqs("#downloadbtn").href = "";
@@ -134,14 +141,16 @@ dqs("#submitbtn").on("click", ev => {
         }),
         onUploadProgress: (ev) => {
             percentage = (ev.loaded / ev.total) * 100
-            dqs("#progressbar .bar").style.width = percentage + "%";
+
+            dqs("#progressbar .bar").style.setProperty("--value", percentage);
+
             if (percentage == 100) {
-                dqs("#progressbar").classList.add("preparing");
+                dqs("#progressbar").classList.add("is-processing");
             }
         }
     }).then(function (res) {
         dqs("#dragzone").dataset.mode = "converted";
-        dqs("#progressbar").classList.remove("preparing");
+        dqs("#progressbar").classList.remove("is-processing");
 
         let blob = new Blob([res.data], { type: "application/epub+zip" });
         let disposition = res.headers['content-disposition'];
@@ -153,8 +162,8 @@ dqs("#submitbtn").on("click", ev => {
         dqs("#downloadbtn").setAttribute("download", filename);
     }).catch(function (e) {
         dqs("#dragzone").dataset.mode = "uploadend";
-        dqs("#progressbar").classList.remove("preparing");
-        dqs("#progressbar").classList.add("negative");
+        dqs("#progressbar").classList.remove("is-processing");
+        dqs("#progressbar").classList.add("is-negative");
         if (e.response) {
             if (e.response.data instanceof Blob && e.response.data.type == "application/json") {
                 let reader = new FileReader();
@@ -168,7 +177,7 @@ dqs("#submitbtn").on("click", ev => {
             }
         } else if (axios.isCancel(e)) {
             console.log("Upload progress canceled");
-            dqs("#progressbar").classList.remove("negative");
+            dqs("#progressbar").classList.remove("is-negative");
             ts(".snackbar").snackbar({
                 content: "上傳已取消"
             });
@@ -182,7 +191,8 @@ dqs("#submitbtn").on("click", ev => {
 dqs("#dragzone").on("click", ev => {
     // if it is uploading, we dont have to deal with dragzone click
     if (dqs("#dragzone").dataset.mode != "uploading") {
-        let allowlist = ["button", "a"];
+        // prevent clicking <button> (submit), <a> (download), <span> (close) triggering dragzone click
+        let allowlist = ["button", "a", "span"];
         if (allowlist.indexOf(ev.target.tagName.toLowerCase()) == -1) {
             ev.preventDefault();
             dqs("#upload").click();
