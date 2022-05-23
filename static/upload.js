@@ -22,10 +22,28 @@ HTMLElement.prototype.on = function(event, callback) {
     return this;
 }
 
-// TODO: snackbar
-const ts = () => {
+const ts = (selector) => {
     return {
-        snackbar: (msg) => { console.log(msg); }
+        snackbar: ({ content }) => {
+            let snackbar = dqs(selector);
+
+            if (!snackbar.dataset.listener) {
+                snackbar.on("animationend", (ev) => {
+                    ev.target.classList.remove("active");
+                });
+                snackbar.dataset.listener = true;
+            }
+
+            dqs(".content", snackbar).innerText = content;
+
+            // reset animation
+            snackbar.classList.toggle("active", false);
+
+            // reflow magic
+            void snackbar.offsetWidth;
+
+            snackbar.classList.add("active");
+        }
     }
 }
 
@@ -78,7 +96,7 @@ function updateFile(files, syncWithInput=true) {
 
     // check file extension
     if (filename.split(".").pop() != "epub") {
-        ts(".ts.snackbar").snackbar({
+        ts(".ts-snackbar").snackbar({
             content: "只接受 EPUB 格式的檔案!"
         });
         return false;
@@ -86,7 +104,7 @@ function updateFile(files, syncWithInput=true) {
 
     // check file size
     if (size >= sizeLimit) {
-        ts(".ts.snackbar").snackbar({
+        ts(".ts-snackbar").snackbar({
             content: "檔案過大!"
         });
         return false;
@@ -139,7 +157,7 @@ dqs("#upload").on("change", ev => {
     let el = ev.target;
     if (el.files.length) {
         if (el.files.length > 1) {
-            ts('.snackbar').snackbar({
+            ts('.ts-snackbar').snackbar({
                 content: "一次僅可上傳一個檔案。"
             });
         } else {
@@ -212,7 +230,7 @@ dqs("#submitbtn").on("click", ev => {
                 let reader = new FileReader();
                 reader.onload = function () {
                     let data = JSON.parse(this.result);
-                    ts(".snackbar").snackbar({
+                    ts(".ts-snackbar").snackbar({
                         content: `錯誤: ${data.error}`
                     });
                 }
@@ -221,7 +239,7 @@ dqs("#submitbtn").on("click", ev => {
         } else if (axios.isCancel(e)) {
             console.log("Upload progress canceled");
             dqs("#progressbar").classList.remove("is-negative");
-            ts(".snackbar").snackbar({
+            ts(".ts-snackbar").snackbar({
                 content: "上傳已取消"
             });
             dqs("#dragzone").dataset.mode = "selecting";
@@ -253,7 +271,7 @@ dqs("#dragzone").on("drop", ev => {
         let files = ev.dataTransfer.files;
         if (files) {
             if (files.length > 1) {
-                ts('.snackbar').snackbar({
+                ts('.ts-snackbar').snackbar({
                     content: "一次僅可上傳一個檔案。"
                 });
             } else if (files.length == 1) {

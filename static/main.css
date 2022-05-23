@@ -101,5 +101,41 @@ body, .ts-box, footer.ts-content, .ts-progress, .ts-close {
 
 /* snackbar */
 .ts-snackbar {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1;
+    margin-left: 20px;
+
+    background-color: var(--ts-gray-800);
+    color: var(--ts-gray-50);
+}
+
+.ts-snackbar:not(.active) {
     display: none;
+}
+
+.ts-snackbar.active.is-fading-up {
+    animation: snackbar-fading 3.4s ease-in-out forwards;
+}
+
+.ts-snackbar.active:hover {
+    animation-play-state: paused;
+}
+
+@keyframes snackbar-fading {
+    0% {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+
+    5%, 95% {
+        transform: translateY(0px);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(50px);
+        opacity: 0;
+    }
 }
