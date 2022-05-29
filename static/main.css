@@ -13,8 +13,12 @@ body {
 }
 
 /* transition */
-body, .ts-box, footer.ts-content, .ts-progress, .ts-close {
+body, .ts-box, footer.ts-content, .ts-close {
     transition: background-color .25s ease, border-color .25s ease;
+}
+
+.ts-progress, .ts-progress .bar {
+    transition: background-color .25s ease, width .1s ease, opacity .5s ease;
 }
 
 .ts-text, .ts-header, i.ts-icon, .ts-close {
@@ -92,11 +96,12 @@ body, .ts-box, footer.ts-content, .ts-progress, .ts-close {
 #progressbar .bar {
     padding: 0;
     min-width: 0;
+    opacity: 1;
 }
 
 /* show processing animation, for the bar is overlapping the animation */
 #progressbar.is-processing .bar {
-    display: none;
+    opacity: 0;
 }
 
 /* snackbar */
