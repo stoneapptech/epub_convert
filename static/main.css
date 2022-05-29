@@ -68,13 +68,13 @@ body, .ts-box, footer.ts-content, .ts-progress, .ts-close {
 /* button */
 .ts-button.is-primary {
     background-color: var(--ts-primary-500);
-    border-color: var(--ts-primary-600);
+    border-color: var(--ts-primary-400);
     color: var(--ts-static-gray-50);
 }
 
 .ts-button.is-positive {
     background-color: var(--ts-positive-500);
-    border-color: var(--ts-positive-500);
+    border-color: var(--ts-positive-400);
     color: var(--ts-static-gray-50);
 }
 
