@@ -18,7 +18,7 @@ body, .ts-box, footer.ts-content, .ts-close {
 }
 
 .ts-progress, .ts-progress .bar {
-    transition: background-color .25s ease, width .1s ease, opacity .5s ease;
+    transition: background-color .25s ease, width .1s ease, opacity .25s ease;
 }
 
 .ts-text, .ts-header, i.ts-icon, .ts-close {
