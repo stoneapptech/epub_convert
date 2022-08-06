@@ -109,6 +109,10 @@ body, .ts-box, footer.ts-content, .ts-close {
     opacity: 0;
 }
 
+#progressbar.is-negative .bar {
+    background-color: var(--ts-negative-500);
+}
+
 /* snackbar */
 .ts-snackbar {
     position: fixed;
