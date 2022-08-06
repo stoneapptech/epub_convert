@@ -195,7 +195,7 @@ dqs("#submitbtn").on("click", ev => {
         dqs("#downloadbtn").removeAttribute("download");
     }
 
-    axios.post("./api/convert", new FormData(document.form), {
+    axios.post(document.form.action, new FormData(document.form), {
         responseType: "blob",
         cancelToken: new CancelToken(function (executor) {
             cancel = executor;
