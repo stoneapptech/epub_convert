@@ -53,7 +53,7 @@ def upload_epub_sync():
             _result = convert_epub(epub_file, output_buffer)
             print(f"Converted Successfully. File: {s2t(epub_file.filename)}")
             output_buffer.seek(0)
-            return send_file(output_buffer, as_attachment=True, attachment_filename=s2t(epub_file.filename))
+            return send_file(output_buffer, as_attachment=True, download_name=s2t(epub_file.filename))
         except Exception as e:
             error_class = e.__class__.__name__
             return jsonify({"status": False, "error": error_class}), 500
