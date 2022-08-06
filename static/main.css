@@ -12,6 +12,11 @@ body {
     background-color: var(--ts-gray-50);
 }
 
+/* fallback font for simplified chinese characters */
+#dragzone .ts-header {
+    font-family: "Noto Sans TC", "Noto Sans SC", sans-serif;
+}
+
 /* transition */
 body, .ts-box, footer.ts-content, .ts-close {
     transition: background-color .25s ease, border-color .25s ease;
