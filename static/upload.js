@@ -244,6 +244,9 @@ dqs("#submitbtn").on("click", ev => {
             });
             dqs("#dragzone").dataset.mode = "selecting";
         } else {
+            ts(".ts-snackbar").snackbar({
+                content: `錯誤: ${e}`
+            });
             console.error(e);
         }
     });
