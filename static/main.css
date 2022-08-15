@@ -94,6 +94,21 @@ body, .ts-box, footer.ts-content, .ts-close {
     top: 2em;
 }
 
+/* dragzone box */
+.ts-box {
+    user-select: none;
+}
+
+.ts-box.is-hollowed:hover {
+    cursor: pointer;
+    border-color: var(--ts-gray-400);
+}
+
+.ts-box.is-hollowed:active {
+    border-color: var(--ts-gray-500);
+}
+
+/* progressbar */
 #progressbar {
     width: 100%;
 }
