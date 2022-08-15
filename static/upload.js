@@ -284,9 +284,15 @@ dqs("#dragzone").on("drop", ev => {
     }
 });
 
-["dragenter", "dragover"].forEach(event => {
+["dragenter", "dragleave"].forEach(event => {
     dqs("#dragzone").on(event, ev => {
+        ev.target.classList.toggle("is-dragover");
         ev.stopPropagation();
         ev.preventDefault();
     });
+});
+
+dqs("#dragzone").on("dragover", ev => {
+    ev.stopPropagation();
+    ev.preventDefault();
 });

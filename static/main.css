@@ -104,7 +104,8 @@ body, .ts-box, footer.ts-content, .ts-close {
     border-color: var(--ts-gray-400);
 }
 
-.ts-box.is-hollowed:active {
+.ts-box.is-hollowed:active,
+.ts-box.is-hollowed.is-dragover {
     border-color: var(--ts-gray-500);
 }
 
