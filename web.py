@@ -29,7 +29,12 @@ def human_file_size(bytes_count):
 @app.route("/", methods=["GET"])
 def render_index():
     limit = app.config["MAX_CONTENT_LENGTH"]
-    return render_template("index.html.j2", limit=limit, limit_human_readable=human_file_size(limit))
+    return render_template(
+            "index.html.j2",
+            limit=limit,
+            limit_human_readable=human_file_size(limit),
+            endpoint=url_for("upload_epub_sync")
+        )
 
 @app.route('/api/convert', methods=["POST"])
 def upload_epub_sync():

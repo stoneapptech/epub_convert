@@ -14,7 +14,7 @@
         <meta name="keywords" content="epub,EPUB,chinese,ebook,電子書,簡體,繁體,簡繁轉換,簡轉繁,簡體轉繁體,線上工具">
     </head>
     <body>
-        <form action="/api/convert" method="post" enctype="multipart/form-data" name="form" id="form">
+        <form action="{{ endpoint }}" method="post" enctype="multipart/form-data" name="form" id="form">
             <input type="file" name="upload" id="upload" accept=".epub" />
         </form>
         <div class="switch-container">
