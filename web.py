@@ -2,7 +2,7 @@ import tempfile
 import hashlib
 from io import BytesIO
 from flask import (
-    Flask, jsonify, request, render_template, send_file
+    Flask, jsonify, request, render_template, send_file, url_for
 )
 from convert import convert_epub, s2t
 from pathlib import Path
@@ -66,4 +66,4 @@ def upload_epub_sync():
         return jsonify({"status": False, "error": "Not an epub document"}), 415 # Unsupported Media Type
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="0.0.0.0")
