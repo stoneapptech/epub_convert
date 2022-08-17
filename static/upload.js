@@ -266,9 +266,17 @@ dqs("#dragzone").on("click", ev => {
     }
 });
 
+// dragleave event would occur while entering child
+// use counter to fix the animation
+let dragCounter = 0;
+
 dqs("#dragzone").on("drop", ev => {
     ev.stopPropagation();
     ev.preventDefault();
+
+    // reset dragCounter
+    dragCounter = 0;
+    this.classList.toggle("is-dragover", false);
 
     if (dqs("#dragzone").dataset.mode != "uploading") {
         let files = ev.dataTransfer.files;
@@ -284,12 +292,19 @@ dqs("#dragzone").on("drop", ev => {
     }
 });
 
-["dragenter", "dragleave"].forEach(event => {
-    dqs("#dragzone").on(event, ev => {
-        ev.target.classList.toggle("is-dragover");
-        ev.stopPropagation();
-        ev.preventDefault();
-    });
+dqs("#dragzone").on("dragenter", function(ev) {
+    ev.stopPropagation();
+    ev.preventDefault();
+
+    dragCounter++;
+    this.classList.toggle("is-dragover", true);
+});
+
+dqs("#dragzone").on("dragleave", function(ev) {
+    ev.stopPropagation();
+    ev.preventDefault();
+
+    if (!--dragCounter) this.classList.toggle("is-dragover", false);
 });
 
 dqs("#dragzone").on("dragover", ev => {
