@@ -76,15 +76,34 @@ body, .ts-box, footer.ts-content, .ts-close {
 
 /* button */
 .ts-button.is-primary {
-    background-color: var(--ts-primary-500);
+    background-color: var(--ts-primary-400);
     border-color: var(--ts-primary-400);
     color: var(--ts-static-gray-50);
 }
 
+.ts-button.is-primary:hover {
+    background-color: var(--ts-primary-500);
+}
+
+.ts-button.is-primary:active {
+    background-color: var(--ts-primary-600);
+    border-color: var(--ts-primary-500);
+}
+
 .ts-button.is-positive {
-    background-color: var(--ts-positive-500);
+    background-color: var(--ts-positive-400);
     border-color: var(--ts-positive-400);
     color: var(--ts-static-gray-50);
+}
+
+.ts-button.is-positive:hover {
+    background-color: var(--ts-positive-500);
+    border-color: var(--ts-positive-400);
+}
+
+.ts-button.is-positive:active {
+    background-color: var(--ts-positive-600);
+    border-color: var(--ts-positive-500);
 }
 
 .ts-close {
@@ -92,6 +111,15 @@ body, .ts-box, footer.ts-content, .ts-close {
     z-index: 3;
     right: 2em;
     top: 2em;
+}
+
+.ts-close:hover {
+    background-color: var(--ts-gray-700);
+}
+
+
+.ts-close:active {
+    background-color: var(--ts-gray-800);
 }
 
 /* dragzone box */
