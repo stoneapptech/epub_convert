@@ -235,6 +235,11 @@ dqs("#submitbtn").on("click", ev => {
                     });
                 }
                 reader.readAsText(e.response.data);
+            } else {
+                ts(".ts-snackbar").snackbar({
+                    content: `錯誤: ${e.message}`
+                });
+                console.error(e);
             }
         } else if (axios.isCancel(e)) {
             console.log("Upload progress canceled");
