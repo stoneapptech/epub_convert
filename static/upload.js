@@ -275,7 +275,7 @@ dqs("#dragzone").on("click", ev => {
 // use counter to fix the animation
 let dragCounter = 0;
 
-dqs("#dragzone").on("drop", ev => {
+dqs("#dragzone").on("drop", function(ev) {
     ev.stopPropagation();
     ev.preventDefault();
 
