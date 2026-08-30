@@ -26,7 +26,7 @@ if (!html.includes('id="auto-download-switch"')) {
     throw new Error("The auto-download switch is missing.");
 }
 
-if (!html.includes("class=\"ts-chip is-outlined\"") || !html.includes("removeSelectedFile(index)")) {
+if (!html.includes("canEditSelection && selectedBooks.length > 1") || !html.includes("class=\"ts-chip is-outlined\"") || !html.includes("removeSelectedFile(index)")) {
     throw new Error("Selected EPUBs must use removable Tocas chips.");
 }
 

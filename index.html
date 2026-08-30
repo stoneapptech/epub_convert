@@ -127,7 +127,7 @@
             <span :class="['ts-icon', fileIcon]" id="file-icon" aria-hidden="true"></span>
             <div class="header" id="file-heading">{{ fileHeading }}</div>
             <div class="description" id="file-description">{{ fileDescription }}</div>
-            <div v-if="canEditSelection" class="ts-wrap is-compact is-center-aligned selected-books" :aria-label="t('app.file.selectedBooks')" @click.stop>
+            <div v-if="canEditSelection && selectedBooks.length > 1" class="ts-wrap is-compact is-center-aligned selected-books" :aria-label="t('app.file.selectedBooks')" @click.stop>
               <span v-for="(book, index) in selectedBooks" :key="book.id" class="ts-chip is-outlined">
                 <span class="selected-book-name" :title="book.name">{{ book.name }}</span>
                 <button class="ts-close is-small" type="button" :aria-label="t('app.file.remove', { filename: book.name })" @click.stop="removeSelectedFile(index)"></button>

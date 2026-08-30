@@ -431,10 +431,12 @@ createApp({
       this.resetProgress();
       currentFile = selectedFiles[batchIndex];
       this.fileHeading = currentFile.name;
-      this.fileDescription = t("app.batch.progress", {
-        current: batchIndex + 1,
-        total: selectedFiles.length,
-      });
+      this.fileDescription = selectedFiles.length > 1
+        ? t("app.batch.progress", {
+          current: batchIndex + 1,
+          total: selectedFiles.length,
+        })
+        : t("app.file.size", { size: humanFileSize(currentFile.size) });
       this.fileIcon = "is-language-icon";
 
       try {
