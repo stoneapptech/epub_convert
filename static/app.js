@@ -49,6 +49,7 @@ let pendingCompletion = null;
 let savedTheme = null;
 let systemThemeListener = null;
 let beforeUnloadListener = null;
+let pageHideListener = null;
 
 try {
   savedTheme = sessionStorage.getItem(THEME_STORAGE_KEY);
@@ -243,13 +244,21 @@ createApp({
     };
     colorScheme.addEventListener?.("change", systemThemeListener);
 
-    beforeUnloadListener = () => this.cleanup();
+    beforeUnloadListener = (event) => {
+      const message = this.beforeUnloadMessage();
+      if (!message) return;
+      event.preventDefault();
+      event.returnValue = message;
+    };
+    pageHideListener = () => this.cleanup();
     window.addEventListener("beforeunload", beforeUnloadListener);
+    window.addEventListener("pagehide", pageHideListener);
   },
 
   beforeUnmount() {
     colorScheme.removeEventListener?.("change", systemThemeListener);
     window.removeEventListener("beforeunload", beforeUnloadListener);
+    window.removeEventListener("pagehide", pageHideListener);
     this.cleanup();
   },
 

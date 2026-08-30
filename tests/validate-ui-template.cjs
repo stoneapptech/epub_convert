@@ -54,4 +54,8 @@ if (!/const MAX_BATCH_FILES = [1-9]\d*;/.test(appSource) || !appSource.includes(
     throw new Error("The batch limit or default auto-download state is incorrect.");
 }
 
+if (!appSource.includes("event.preventDefault();") || !appSource.includes('addEventListener("pagehide"')) {
+    throw new Error("Active conversions must guard beforeunload without cleaning up cancelled navigation.");
+}
+
 console.log("Vue template compiled successfully.");
