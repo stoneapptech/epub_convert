@@ -67,8 +67,25 @@ footer.ts-content,
   z-index: 2;
 }
 
+.selected-books {
+  position: relative;
+  z-index: 2;
+  margin-top: var(--ts-space-gap-small);
+}
+
+.selected-book-name {
+  max-width: min(20rem, 60vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #settings-details {
   margin-top: 1rem;
+}
+
+.auto-download-summary {
+  margin-inline-start: auto;
 }
 
 #dropzone.is-hollowed:hover {

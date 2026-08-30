@@ -10,6 +10,7 @@ const THEME_STORAGE_KEY = "epub-convert-theme";
 const MIN_STAGE_DISPLAY_MS = 500;
 const MIN_CONVERSION_STAGE_DISPLAY_MS = 2000;
 const FILENAME_TRANSITION_MS = 240;
+const MAX_BATCH_FILES = 25;
 const colorScheme = matchMedia("(prefers-color-scheme: dark)");
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const ConversionState = Object.freeze({
@@ -29,9 +30,13 @@ const ProgressPhaseIcon = Object.freeze({
   complete: "is-circle-check-icon",
 });
 
-let selectedFile = null;
+let selectedFiles = [];
+let currentFile = null;
+let batchIndex = 0;
+let batchConfig = null;
+let nextSelectedFileId = 0;
 let worker = null;
-let downloadObjectUrl = null;
+const downloadObjectUrls = new Set();
 let dragDepth = 0;
 let snackbarTimer = null;
 let progressTimer = null;
@@ -128,6 +133,7 @@ function humanFileSize(bytes) {
 createApp({
   data() {
     return {
+      t,
       state: ConversionState.EMPTY,
       hasFile: false,
       isDragover: false,
@@ -138,11 +144,13 @@ createApp({
       conversionRegion: "tw",
       useWordConversion: false,
       useJieba: false,
+      autoDownload: false,
+      selectedBooks: [],
       progressDeterminate: false,
       progressPercent: 0,
       progressLabel: t("app.progress.preparing"),
-      downloadUrl: "",
-      downloadFilename: "",
+      downloads: [],
+      failures: [],
       darkMode: initialDarkMode,
       snackbarVisible: false,
       snackbarMessage: "",
@@ -152,6 +160,12 @@ createApp({
   computed: {
     isConverting() {
       return this.state === ConversionState.CONVERTING;
+    },
+    canEditSelection() {
+      return this.hasFile && (
+        this.state === ConversionState.SELECTED ||
+        this.state === ConversionState.FAILED
+      );
     },
     conversionDirection() {
       return this.convertToSimplified ? "t2s" : "s2t";
@@ -166,7 +180,12 @@ createApp({
       const direction = t(this.convertToSimplified ? "app.summary.t2s" : "app.summary.s2t");
       const region = t(`app.summary.region.${this.conversionRegion}`);
       const conversion = t(this.useWordConversion ? "app.summary.words" : "app.summary.characters");
-      return [direction, region, conversion, this.useJieba ? t("app.summary.segmentation") : null].filter(Boolean);
+      return [
+        direction,
+        region,
+        conversion,
+        this.useJieba ? t("app.summary.segmentation") : null,
+      ].filter(Boolean);
     },
     mode() {
       return resolveMode(this.conversionDirection, this.conversionRegion, this.useWordConversion);
@@ -247,9 +266,10 @@ createApp({
       worker = new Worker(new URL("./convert-worker.js", import.meta.url), { type: "module" });
       worker.addEventListener("message", this.handleWorkerMessage);
       worker.addEventListener("error", (event) => {
-        this.failConversion(
+        this.failCurrentFile(
           t("app.error.unknown"),
           event.error || event,
+          true,
         );
       });
     },
@@ -257,15 +277,14 @@ createApp({
     cleanup() {
       terminateWorker();
       clearProgressQueue();
-      this.revokeDownload();
+      this.revokeDownloads();
       clearTimeout(snackbarTimer);
     },
 
-    revokeDownload() {
-      if (downloadObjectUrl) URL.revokeObjectURL(downloadObjectUrl);
-      downloadObjectUrl = null;
-      this.downloadUrl = "";
-      this.downloadFilename = "";
+    revokeDownloads() {
+      for (const url of downloadObjectUrls) URL.revokeObjectURL(url);
+      downloadObjectUrls.clear();
+      this.downloads = [];
     },
 
     showSnackbar(message) {
@@ -286,33 +305,88 @@ createApp({
       this.progressLabel = t("app.progress.preparing");
     },
 
-    selectFile(file, syncInput = false) {
-      if (!file || !/\.epub$/i.test(file.name)) {
+    selectFiles(fileList, syncInput = false) {
+      const files = Array.from(fileList || []);
+      const epubFiles = files.filter((file) => /\.epub$/i.test(file.name));
+      const validFiles = epubFiles.slice(0, MAX_BATCH_FILES);
+      const invalidCount = files.length - epubFiles.length;
+      const overflowCount = epubFiles.length - validFiles.length;
+      if (!validFiles.length) {
         this.$refs.fileInput.value = "";
         this.showSnackbar(t("app.file.invalidExtension"));
         return;
       }
 
-      this.revokeDownload();
-      selectedFile = file;
+      this.revokeDownloads();
+      this.failures = [];
+      selectedFiles = validFiles;
+      this.selectedBooks = validFiles.map((file) => ({
+        id: ++nextSelectedFileId,
+        name: file.name,
+      }));
       this.hasFile = true;
-      this.fileHeading = file.name;
-      this.fileDescription = t("app.file.size", { size: humanFileSize(file.size) });
       this.fileIcon = "is-book-open-icon";
       this.state = ConversionState.SELECTED;
+      this.updateSelectionSummary();
+
+      if (overflowCount) {
+        this.showSnackbar(t("app.file.tooMany", {
+          limit: MAX_BATCH_FILES,
+          count: overflowCount,
+        }));
+      } else if (invalidCount) {
+        this.showSnackbar(t("app.file.invalidFiles", { count: invalidCount }));
+      }
 
       if (syncInput) {
-        const transfer = new DataTransfer();
-        transfer.items.add(file);
-        this.$refs.fileInput.files = transfer.files;
+        this.syncFileInput();
       }
+    },
+
+    syncFileInput() {
+      const transfer = new DataTransfer();
+      for (const file of selectedFiles) transfer.items.add(file);
+      this.$refs.fileInput.files = transfer.files;
+    },
+
+    removeSelectedFile(index) {
+      if (!this.canEditSelection || index < 0 || index >= selectedFiles.length) return;
+      selectedFiles.splice(index, 1);
+      this.selectedBooks.splice(index, 1);
+      this.failures = [];
+
+      if (!selectedFiles.length) {
+        this.resetSelection();
+        return;
+      }
+
+      this.syncFileInput();
+      this.state = ConversionState.SELECTED;
+      this.fileIcon = "is-book-open-icon";
+      this.updateSelectionSummary();
+    },
+
+    updateSelectionSummary() {
+      if (selectedFiles.length === 1) {
+        this.fileHeading = selectedFiles[0].name;
+        this.fileDescription = t("app.file.size", { size: humanFileSize(selectedFiles[0].size) });
+        return;
+      }
+      const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+      this.fileHeading = t("app.file.selectedMany", { count: selectedFiles.length });
+      this.fileDescription = t("app.file.totalSize", { size: humanFileSize(totalSize) });
     },
 
     resetSelection() {
       terminateWorker();
       clearProgressQueue();
-      this.revokeDownload();
-      selectedFile = null;
+      this.revokeDownloads();
+      selectedFiles = [];
+      this.selectedBooks = [];
+      currentFile = null;
+      batchIndex = 0;
+      batchConfig = null;
+      this.failures = [];
       this.$refs.fileInput.value = "";
       this.state = ConversionState.EMPTY;
       this.hasFile = false;
@@ -329,28 +403,49 @@ createApp({
 
     onFileChange(event) {
       const files = event.target.files;
-      if (files.length === 1) this.selectFile(files[0]);
+      if (files.length) this.selectFiles(files, true);
       else if (!files.length) this.resetSelection();
     },
 
-    async startConversion() {
-      if (!selectedFile) return;
+    startConversion() {
+      if (!selectedFiles.length) return;
       clearProgressQueue();
-      this.revokeDownload();
+      this.revokeDownloads();
+      this.failures = [];
       this.resetProgress();
       this.state = ConversionState.CONVERTING;
       this.fileIcon = "is-language-icon";
+      batchIndex = 0;
+      batchConfig = resolveConfig(this.mode, this.useJieba);
+      this.convertNextFile();
+    },
+
+    async convertNextFile() {
+      if (!this.isConverting) return;
+      if (batchIndex >= selectedFiles.length) {
+        this.finishBatch();
+        return;
+      }
+
+      clearProgressQueue();
+      this.resetProgress();
+      currentFile = selectedFiles[batchIndex];
+      this.fileHeading = currentFile.name;
+      this.fileDescription = t("app.batch.progress", {
+        current: batchIndex + 1,
+        total: selectedFiles.length,
+      });
+      this.fileIcon = "is-language-icon";
 
       try {
-        const bytes = await selectedFile.arrayBuffer();
+        const bytes = await currentFile.arrayBuffer();
         if (!worker) this.createWorker();
-        const config = resolveConfig(this.mode, this.useJieba);
         worker.postMessage(
-          { type: "convert", bytes, filename: selectedFile.name, config },
+          { type: "convert", bytes, filename: currentFile.name, config: batchConfig },
           [bytes],
         );
       } catch (error) {
-        this.failConversion(error.message || t("app.error.readFile"), error);
+        this.failCurrentFile(error.message || t("app.error.readFile"), error);
       }
     },
 
@@ -411,7 +506,7 @@ createApp({
 
     queueCompletion(message) {
       if (reducedMotion.matches) {
-        this.finishConversion(message);
+        this.finishCurrentFile(message);
         return;
       }
       pendingCompletion = message;
@@ -464,36 +559,71 @@ createApp({
       if (pendingCompletion) {
         const message = pendingCompletion;
         clearProgressQueue();
-        this.finishConversion(message);
+        this.finishCurrentFile(message);
       }
     },
 
-    finishConversion(message) {
+    finishCurrentFile(message) {
+      if (!this.isConverting || !currentFile) return;
       const blob = new Blob([message.bytes], { type: "application/epub+zip" });
-      downloadObjectUrl = URL.createObjectURL(blob);
-      this.downloadUrl = downloadObjectUrl;
-      this.downloadFilename = message.filename;
-      this.fileHeading = t("app.result.complete");
-      this.fileDescription = message.filename;
-      this.fileIcon = "is-circle-check-icon is-positive";
-      this.state = ConversionState.COMPLETE;
+      const url = URL.createObjectURL(blob);
+      downloadObjectUrls.add(url);
+      const download = { url, filename: message.filename };
+      this.downloads.push(download);
+      if (this.autoDownload) this.triggerDownload(download);
+
+      currentFile = null;
+      batchIndex += 1;
+      this.convertNextFile();
     },
 
-    failConversion(message, error = null) {
+    triggerDownload(download) {
+      const link = document.createElement("a");
+      link.href = download.url;
+      link.download = download.filename;
+      link.hidden = true;
+      document.body.append(link);
+      link.click();
+      link.remove();
+    },
+
+    failCurrentFile(message, error = null, forceWorkerReset = false) {
+      if (!this.isConverting || !currentFile) return;
+      const failedFile = currentFile;
+      currentFile = null;
       console.error("[EPUB converter] Conversion failed", {
         error: error || message,
-        filename: selectedFile?.name || null,
+        filename: failedFile.name,
         mode: this.mode,
         useJieba: this.useJieba,
         state: this.state,
       });
       clearProgressQueue();
-      terminateWorker();
-      this.fileHeading = t("app.result.failed");
-      this.fileDescription = message;
-      this.fileIcon = "is-circle-exclamation-icon is-negative";
-      this.state = ConversionState.FAILED;
-      this.showSnackbar(message);
+      const mustResetWorker = forceWorkerReset
+        || error?.name === "RuntimeError"
+        || error?.cause?.name === "RuntimeError"
+        || error?.phase?.startsWith?.("initializing");
+      if (mustResetWorker) terminateWorker();
+      this.failures.push({ filename: failedFile.name, message });
+      this.showSnackbar(t("app.batch.fileFailed", { filename: failedFile.name }));
+      batchIndex += 1;
+      this.convertNextFile();
+    },
+
+    finishBatch() {
+      const success = this.downloads.length;
+      const failed = this.failures.length;
+      currentFile = null;
+      batchConfig = null;
+      this.fileHeading = success
+        ? t("app.batch.complete", { success })
+        : t("app.batch.failedAll");
+      this.fileDescription = t("app.batch.summary", { success, failed });
+      this.fileIcon = success && !failed
+        ? "is-circle-check-icon is-positive"
+        : "is-circle-exclamation-icon is-negative";
+      this.state = success ? ConversionState.COMPLETE : ConversionState.FAILED;
+      if (failed) this.showSnackbar(t("app.batch.summary", { success, failed }));
     },
 
     handleWorkerMessage(event) {
@@ -501,16 +631,20 @@ createApp({
       if (event.data?.type === "complete") this.queueCompletion(event.data);
       if (event.data?.type === "error") {
         const detail = event.data.error.entryName ? `（${event.data.error.entryName}）` : "";
-        this.failConversion(`${event.data.error.message}${detail}`, event.data.error);
+        this.failCurrentFile(`${event.data.error.message}${detail}`, event.data.error);
       }
     },
 
     cancelConversion() {
-      if (!this.isConverting || !selectedFile) return;
+      if (!this.isConverting || !selectedFiles.length) return;
       clearProgressQueue();
       terminateWorker();
-      this.fileHeading = selectedFile.name;
-      this.fileDescription = t("app.file.size", { size: humanFileSize(selectedFile.size) });
+      this.revokeDownloads();
+      this.failures = [];
+      currentFile = null;
+      batchIndex = 0;
+      batchConfig = null;
+      this.updateSelectionSummary();
       this.fileIcon = "is-book-open-reader-icon";
       this.state = ConversionState.SELECTED;
       this.showSnackbar(t("app.result.cancelled"));
@@ -561,11 +695,8 @@ createApp({
       if (this.isConverting) return;
 
       const files = event.dataTransfer?.files;
-      if (!files || files.length !== 1) {
-        this.showSnackbar(t("app.file.singleOnly"));
-        return;
-      }
-      this.selectFile(files[0], true);
+      if (!files?.length) return;
+      this.selectFiles(files, true);
     },
   },
 }).mount("#app");

@@ -36,6 +36,23 @@
           <summary>
             <span class="ts-icon is-gears-icon is-end-spaced" aria-hidden="true"></span> 轉換設定
             <span v-for="setting in settingsSummary" :key="setting" class="ts-chip is-small is-start-spaced">{{ setting }}</span>
+            <span class="ts-wrap is-compact is-middle-aligned auto-download-summary" @click.stop @keydown.stop>
+              <label class="ts-switch" tabindex="0">
+                <input type="checkbox" id="auto-download-switch" v-model="autoDownload" :disabled="isConverting" :aria-description="t('app.autoDownload.help')">
+                {{ t("app.autoDownload.label") }}
+              </label>
+              <span
+                class="ts-icon is-circle-question-icon"
+                tabindex="0"
+                role="button"
+                :aria-label="t('app.autoDownload.help')"
+                :data-tooltip="t('app.autoDownload.help')"
+                data-trigger="hover"
+                @click="toggleTooltip"
+                @keydown.enter.prevent="toggleTooltip"
+                @keydown.space.prevent="toggleTooltip"
+              ></span>
+            </span>
           </summary>
           <fieldset class="ts-fieldset">
             <div class="ts-grid is-top-aligned is-stackable mobile:is-stacked">
@@ -104,18 +121,24 @@
           @dragleave.prevent="onDragLeave"
           @drop.prevent="onDrop"
         >
-          <input ref="fileInput" type="file" id="epub-file" accept=".epub,application/epub+zip" aria-describedby="file-description" hidden @change="onFileChange">
+          <input ref="fileInput" type="file" id="epub-file" accept=".epub,application/epub+zip" aria-describedby="file-description" multiple hidden @change="onFileChange">
           <button v-if="hasFile" class="ts-close" id="reset-button" type="button" :aria-label="closeButtonLabel" @click="closeFilePanel"></button>
           <div class="ts-blankslate is-large" :class="{ 'is-interactive': !isConverting }" id="file-panel" @click="openFilePicker">
             <span :class="['ts-icon', fileIcon]" id="file-icon" aria-hidden="true"></span>
             <div class="header" id="file-heading">{{ fileHeading }}</div>
             <div class="description" id="file-description">{{ fileDescription }}</div>
+            <div v-if="canEditSelection" class="ts-wrap is-compact is-center-aligned selected-books" :aria-label="t('app.file.selectedBooks')" @click.stop>
+              <span v-for="(book, index) in selectedBooks" :key="book.id" class="ts-chip is-outlined">
+                <span class="selected-book-name" :title="book.name">{{ book.name }}</span>
+                <button class="ts-close is-small" type="button" :aria-label="t('app.file.remove', { filename: book.name })" @click.stop="removeSelectedFile(index)"></button>
+              </span>
+            </div>
             <div v-if="hasFile && !isConverting" class="action ts-wrap is-center-aligned">
-              <button v-if="!downloadUrl" class="ts-button is-start-icon" id="convert-button" type="button" @click="startConversion">
+              <button v-if="!downloads.length" class="ts-button is-start-icon" id="convert-button" type="button" @click="startConversion">
                 <span class="ts-icon is-wand-magic-sparkles-icon" aria-hidden="true"></span> 開始轉換
               </button>
-              <a v-if="downloadUrl" class="ts-button is-start-icon" id="download-button" :href="downloadUrl" :download="downloadFilename">
-                <span class="ts-icon is-download-icon" aria-hidden="true"></span> 下載 EPUB
+              <a v-for="download in downloads" :key="download.url" class="ts-button is-secondary is-outlined is-start-icon" :href="download.url" :download="download.filename">
+                <span class="ts-icon is-download-icon" aria-hidden="true"></span> {{ download.filename }}
               </a>
             </div>
             <div v-if="isConverting" class="action" id="progress-area">
@@ -133,6 +156,12 @@
           </div>
           <div class="symbol"><span class="ts-icon is-book-icon" aria-hidden="true"></span></div>
         </section>
+        <div v-if="failures.length" class="ts-notice is-negative is-outlined has-top-spaced" role="status">
+          <div class="title">{{ t("app.batch.failuresTitle", { count: failures.length }) }}</div>
+          <div class="content">
+            <div v-for="(failure, index) in failures" :key="`${failure.filename}-${index}`"><strong>{{ failure.filename }}</strong>：{{ failure.message }}</div>
+          </div>
+        </div>
       </div>
 
     </main>

@@ -5,12 +5,14 @@ const converters = new Map();
 let openCcModulePromise = null;
 
 async function getConverter(config, onProgress) {
-  onProgress({
-    phase: "initializing-opencc",
-    percent: 0,
-    label: t("worker.progress.loadingOpenCC"),
-  });
-  openCcModulePromise ??= import("../vendor/opencc-wasm/esm/index.js");
+  if (!openCcModulePromise) {
+    onProgress({
+      phase: "initializing-opencc",
+      percent: 0,
+      label: t("worker.progress.loadingOpenCC"),
+    });
+    openCcModulePromise = import("../vendor/opencc-wasm/esm/index.js");
+  }
   const { default: OpenCC } = await openCcModulePromise;
 
   if (!converters.has(config)) {
