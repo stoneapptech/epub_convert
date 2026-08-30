@@ -392,7 +392,7 @@ createApp({
       this.hasFile = false;
       this.fileHeading = t("app.file.select");
       this.fileDescription = t("app.file.dropPrompt");
-      this.fileIcon = "is-book-open-icon";
+      this.fileIcon = "is-book-medical-icon";
       this.resetProgress();
     },
 
