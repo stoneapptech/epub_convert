@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-Hant" data-scheme="light">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>EPUB 簡繁轉換</title>
+  <meta name="description" content="EPUB 簡繁轉換線上工具。支援拖放上傳，且上傳後即刻開始轉換，數秒內即轉換完成。">
+  <meta name="keywords" content="epub,EPUB,chinese,ebook,電子書,簡體,繁體,簡繁轉換,簡轉繁,簡體轉繁體,線上工具,線上轉換,繁體中文,簡體中文,繁簡轉換,繁轉簡,繁體轉簡體,OpenCC">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;display=swap">
+  <link rel="stylesheet" href="vendor/tocas/tocas.min.css">
+  <link rel="stylesheet" href="static/main.css">
+  <script src="vendor/tocas/tocas.min.js"></script>
+  <script src="vendor/vue/vue.global.prod.js"></script>
+  <script type="module" src="static/app.js"></script>
+</head>
+
+<body>
+  <div id="app" v-cloak>
+    <header class="ts-header is-center-aligned is-huge">
+      <div class="ts-content is-padded">EPUB 簡繁轉換</div>
+    </header>
+
+    <main class="ts-app-center has-vertically-padded" id="main">
+      <div class="ts-container">
+
+        <!-- <div class="ts-notice is-outlined" role="note">
+          <span class="title">隱私</span>
+          <span class="content">檔案不會上傳到伺服器。轉換完成前請勿關閉此頁面。</span>
+        </div> -->
+
+        <details class="ts-accordion has-bottom-spaced" id="settings-details">
+          <summary>
+            <span class="ts-icon is-gears-icon is-end-spaced" aria-hidden="true"></span> 轉換設定
+            <span v-for="setting in settingsSummary" :key="setting" class="ts-chip is-small is-start-spaced">{{ setting }}</span>
+          </summary>
+          <fieldset class="ts-fieldset">
+            <div class="ts-grid is-top-aligned is-stackable mobile:is-stacked">
+              <div class="column is-4-wide">
+                <div class="ts-text is-label has-bottom-spaced-small" id="conversion-direction-label">轉換方向</div>
+                <div class="ts-selection is-fluid" role="radiogroup" aria-labelledby="conversion-direction-label">
+                  <label class="item">
+                    <input type="radio" name="conversion-direction" :value="false" v-model="convertToSimplified":disabled="isConverting">
+                    <span class="text">简 → 繁</span>
+                  </label>
+                  <label class="item">
+                    <input type="radio" name="conversion-direction" :value="true" v-model="convertToSimplified" :disabled="isConverting">
+                    <span class="text">繁 → 简</span>
+                  </label>
+                </div>
+              </div>
+              <div class="column is-8-wide">
+                <div class="ts-text is-label has-bottom-spaced-small" id="conversion-region-label">
+                  {{ conversionRegionLabel }} <span class="ts-icon is-circle-question-icon is-start-spaced" :data-tooltip="conversionRegionHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true"></span>
+                </div>
+                <div class="ts-selection is-fluid" role="radiogroup" aria-labelledby="conversion-region-label" :aria-description="conversionRegionHelp">
+                  <label class="item">
+                    <input type="radio" name="conversion-region" value="standard" v-model="conversionRegion" :disabled="isConverting">
+                    <span class="text"><span class="ts-icon is-globe-icon is-end-spaced" aria-hidden="true"></span>預設</span>
+                  </label>
+                  <label class="item">
+                    <input type="radio" name="conversion-region" value="tw" v-model="conversionRegion" :disabled="isConverting">
+                    <span class="text"><span class="ts-flag is-taiwan-flag is-end-spaced" aria-hidden="true"></span>台灣</span>
+                  </label>
+                  <label class="item">
+                    <input type="radio" name="conversion-region" value="hk" v-model="conversionRegion" :disabled="isConverting">
+                    <span class="text"><span class="ts-flag is-hong-kong-flag is-end-spaced" aria-hidden="true"></span>香港</span>
+                  </label>
+                </div>
+              </div>
+              <div class="column is-4-wide">
+                <div class="ts-text is-label has-bottom-spaced-small" id="word-conversion-label">
+                  地區用詞 <span class="ts-icon is-circle-question-icon is-start-spaced" :data-tooltip="wordConversionHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true"></span>
+                </div>
+                <label class="ts-switch" tabindex="0">
+                  <input type="checkbox" id="word-conversion-switch" v-model="useWordConversion" :disabled="!wordConversionSupported || isConverting" :aria-description="wordConversionHelp">
+                  {{ wordConversionLabel }}
+                </label>
+                <template v-if="jiebaSupported">
+                  <div class="ts-text is-label has-top-spaced-small has-bottom-spaced-small" :data-tooltip="jiebaHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true">
+                    進階斷詞 <span class="ts-icon is-circle-question-icon is-start-spaced" aria-hidden="true"></span>
+                  </div>
+                  <label class="ts-switch" tabindex="0">
+                    <input type="checkbox" id="jieba-switch" v-model="useJieba" :disabled="isConverting" :aria-description="jiebaHelp">
+                    使用斷詞
+                  </label>
+                </template>
+              </div>
+            </div>
+          </fieldset>
+        </details>
+
+        <section
+          class="ts-box is-hollowed"
+          id="dropzone"
+          :class="{ 'is-dragover': isDragover }"
+          :data-state="state"
+          aria-labelledby="file-heading"
+          @dragenter.prevent="onDragEnter"
+          @dragover.prevent
+          @dragleave.prevent="onDragLeave"
+          @drop.prevent="onDrop"
+        >
+          <input ref="fileInput" type="file" id="epub-file" accept=".epub,application/epub+zip" aria-describedby="file-description" hidden @change="onFileChange">
+          <button v-if="hasFile" class="ts-close" id="reset-button" type="button" :aria-label="closeButtonLabel" @click="closeFilePanel"></button>
+          <div class="ts-blankslate is-large" :class="{ 'is-interactive': !isConverting }" id="file-panel" @click="openFilePicker">
+            <span :class="['ts-icon', fileIcon]" id="file-icon" aria-hidden="true"></span>
+            <div class="header" id="file-heading">{{ fileHeading }}</div>
+            <div class="description" id="file-description">{{ fileDescription }}</div>
+            <div v-if="hasFile && !isConverting" class="action ts-wrap is-center-aligned">
+              <button v-if="!downloadUrl" class="ts-button is-start-icon" id="convert-button" type="button" @click="startConversion">
+                <span class="ts-icon is-wand-magic-sparkles-icon" aria-hidden="true"></span> 開始轉換
+              </button>
+              <a v-if="downloadUrl" class="ts-button is-start-icon" id="download-button" :href="downloadUrl" :download="downloadFilename">
+                <span class="ts-icon is-download-icon" aria-hidden="true"></span> 下載 EPUB
+              </a>
+            </div>
+            <div v-if="isConverting" class="action" id="progress-area">
+              <div class="ts-progress has-top-spaced" :class="progressClass" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progressPercent">
+                <div class="bar" :style="{ '--value': progressPercent }">
+                  <div class="text" id="progress-value">{{ progressPercent }}%</div>
+                </div>
+              </div>
+              <div class="ts-text is-secondary has-top-spaced-small" id="progress-label" aria-live="polite">{{ progressLabel }}</div>
+            </div>
+          </div>
+          <div class="symbol"><span class="ts-icon is-book-icon" aria-hidden="true"></span></div>
+        </section>
+      </div>
+
+    </main>
+
+    <footer class="ts-content is-center-aligned is-tertiary">
+      <div class="ts-text">EPUB 的簡繁轉換線上工具。支援拖放上傳，且上傳後即刻開始轉換，數秒內即轉換完成。</div>
+      <div class="ts-text is-secondary">&copy; Stone App · <a href="https://github.com/stoneapptech/epub_convert">GitHub</a></div>
+    </footer>
+
+    <div class="theme-control">
+      <label class="ts-switch" id="theme-control" :aria-label="themeLabel" :title="themeLabel">
+        <input type="checkbox" id="theme-switch" v-model="darkMode" @change="saveTheme">
+        <span :class="['ts-icon', darkMode ? 'is-moon-icon' : 'is-sun-icon']" id="theme-icon" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div class="snackbar-container" aria-live="assertive">
+      <div v-if="snackbarVisible" class="ts-snackbar" id="snackbar">
+        <div class="content" id="snackbar-content">{{ snackbarMessage }}</div>
+        <button class="close" id="snackbar-close" type="button" aria-label="關閉通知" @click="hideSnackbar"></button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant" data-scheme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>EPUB 轉換器瀏覽器測試</title>
+        <link rel="stylesheet" href="../vendor/tocas/tocas.min.css">
+        <style>
+            body { padding: 2rem; background: var(--ts-gray-75); }
+            #results .item { overflow-wrap: anywhere; }
+        </style>
+    </head>
+    <body>
+        <main class="ts-container is-narrow">
+            <div class="ts-header is-huge">瀏覽器測試</div>
+            <div class="ts-text is-secondary">測試使用正式的 OpenCC、EPUB 轉換模組與 WASM ZIP 引擎。</div>
+            <div class="ts-space"></div>
+            <button class="ts-button" id="run-tests" type="button">執行全部測試</button>
+            <div class="ts-space"></div>
+            <div class="ts-list is-unordered" id="results" aria-live="polite"></div>
+        </main>
+        <script type="module" src="browser-tests.js"></script>
+    </body>
+</html>

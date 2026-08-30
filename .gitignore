@@ -1,3 +1,6 @@
 __pycache__/
+.vendor-stage/
+.browser-profile/
+node_modules/
 # test epub files
 *.epub
