@@ -7,7 +7,11 @@ if (!globalThis.Vue) {
 
 const { createApp } = globalThis.Vue;
 const THEME_STORAGE_KEY = "epub-convert-theme";
+const MIN_STAGE_DISPLAY_MS = 500;
+const MIN_CONVERSION_STAGE_DISPLAY_MS = 2000;
+const FILENAME_TRANSITION_MS = 240;
 const colorScheme = matchMedia("(prefers-color-scheme: dark)");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const ConversionState = Object.freeze({
   EMPTY: "empty",
   SELECTED: "selected",
@@ -15,12 +19,28 @@ const ConversionState = Object.freeze({
   COMPLETE: "complete",
   FAILED: "failed",
 });
+const ProgressPhaseIcon = Object.freeze({
+  "initializing-opencc": "is-microchip-icon",
+  "initializing-dictionary": "is-book-open-icon",
+  reading: "is-magnifying-glass-icon",
+  converting: "is-language-icon",
+  building: "is-file-circle-plus-icon",
+  compressing: "is-file-zipper-icon",
+  complete: "is-circle-check-icon",
+});
 
 let selectedFile = null;
 let worker = null;
 let downloadObjectUrl = null;
 let dragDepth = 0;
 let snackbarTimer = null;
+let progressTimer = null;
+let filenameTimer = null;
+let progressQueue = [];
+let activeProgressPhase = null;
+let activePhaseStartedAt = 0;
+let activeFilenameProgress = [];
+let pendingCompletion = null;
 let savedTheme = null;
 let systemThemeListener = null;
 let beforeUnloadListener = null;
@@ -43,6 +63,54 @@ applyThemeClass(initialDarkMode);
 function terminateWorker() {
   if (worker) worker.terminate();
   worker = null;
+}
+
+function clearProgressQueue() {
+  if (progressTimer !== null) clearTimeout(progressTimer);
+  if (filenameTimer !== null) clearTimeout(filenameTimer);
+  progressTimer = null;
+  filenameTimer = null;
+  progressQueue = [];
+  activeProgressPhase = null;
+  activePhaseStartedAt = 0;
+  activeFilenameProgress = [];
+  pendingCompletion = null;
+}
+
+function stageDisplayDuration(phase) {
+  return phase === "converting"
+    ? MIN_CONVERSION_STAGE_DISPLAY_MS
+    : MIN_STAGE_DISPLAY_MS;
+}
+
+function hasPacedFilenames(phase) {
+  return phase === "converting" || phase === "compressing";
+}
+
+function filenameProgressLimit(phase) {
+  return Math.max(1, Math.floor(stageDisplayDuration(phase) / FILENAME_TRANSITION_MS));
+}
+
+function appendFilenameProgress(queue, progress) {
+  queue.push(progress);
+  if (queue.length <= filenameProgressLimit(progress.phase)) return;
+
+  const lastProgress = queue.at(-1);
+  const sampled = queue.filter((_, index) => index % 2 === 0);
+  if (sampled.at(-1) !== lastProgress) sampled.push(lastProgress);
+  queue.splice(0, queue.length, ...sampled);
+}
+
+function filenameTargetTime(progress) {
+  if (Number.isFinite(progress.displayPosition)) {
+    return activePhaseStartedAt
+      + progress.displayPosition * stageDisplayDuration(progress.phase);
+  }
+  const total = Math.max(1, progress.total || 1);
+  const ordinal = progress.phase === "compressing"
+    ? Math.max(0, progress.current - 1)
+    : Math.max(0, progress.current);
+  return activePhaseStartedAt + (ordinal / total) * stageDisplayDuration(progress.phase);
 }
 
 function humanFileSize(bytes) {
@@ -188,6 +256,7 @@ createApp({
 
     cleanup() {
       terminateWorker();
+      clearProgressQueue();
       this.revokeDownload();
       clearTimeout(snackbarTimer);
     },
@@ -241,6 +310,7 @@ createApp({
 
     resetSelection() {
       terminateWorker();
+      clearProgressQueue();
       this.revokeDownload();
       selectedFile = null;
       this.$refs.fileInput.value = "";
@@ -265,6 +335,7 @@ createApp({
 
     async startConversion() {
       if (!selectedFile) return;
+      clearProgressQueue();
       this.revokeDownload();
       this.resetProgress();
       this.state = ConversionState.CONVERTING;
@@ -285,11 +356,116 @@ createApp({
 
     updateProgress(progress) {
       this.progressDeterminate = Number.isFinite(progress.percent)
-        && progress.phase !== "initializing";
+        && !progress.phase.startsWith("initializing");
       if (this.progressDeterminate) {
         this.progressPercent = Math.max(0, Math.min(100, progress.percent));
       }
       this.progressLabel = progress.label || t("app.progress.converting");
+      this.fileIcon = ProgressPhaseIcon[progress.phase] || "is-gears-icon";
+    },
+
+    queueProgress(progress) {
+      if (reducedMotion.matches) {
+        this.updateProgress(progress);
+        return;
+      }
+
+      if (progress.phase === activeProgressPhase) {
+        if (hasPacedFilenames(progress.phase)) {
+          appendFilenameProgress(activeFilenameProgress, progress);
+          this.scheduleFilenameProgress();
+        } else {
+          this.updateProgress(progress);
+        }
+        return;
+      }
+
+      const lastIndex = progressQueue.length - 1;
+      if (progressQueue[lastIndex]?.phase === progress.phase) {
+        if (hasPacedFilenames(progress.phase)) {
+          appendFilenameProgress(progressQueue[lastIndex].updates, progress);
+        } else {
+          progressQueue[lastIndex].updates = [progress];
+        }
+      } else {
+        progressQueue.push({ phase: progress.phase, updates: [progress] });
+      }
+      this.scheduleProgressAdvance();
+    },
+
+    scheduleFilenameProgress() {
+      if (filenameTimer !== null || !activeFilenameProgress.length) return;
+      const delay = Math.max(0, filenameTargetTime(activeFilenameProgress[0]) - performance.now());
+      filenameTimer = setTimeout(() => {
+        filenameTimer = null;
+        this.showNextFilename();
+      }, delay);
+    },
+
+    showNextFilename() {
+      const progress = activeFilenameProgress.shift();
+      if (!progress || !this.isConverting || progress.phase !== activeProgressPhase) return;
+      this.updateProgress(progress);
+      this.scheduleFilenameProgress();
+    },
+
+    queueCompletion(message) {
+      if (reducedMotion.matches) {
+        this.finishConversion(message);
+        return;
+      }
+      pendingCompletion = message;
+      this.scheduleProgressAdvance();
+    },
+
+    scheduleProgressAdvance() {
+      if (progressTimer !== null) return;
+      if (!progressQueue.length && !pendingCompletion) return;
+
+      const elapsed = activeProgressPhase === null
+        ? MIN_STAGE_DISPLAY_MS
+        : performance.now() - activePhaseStartedAt;
+      const minimumDisplay = stageDisplayDuration(activeProgressPhase);
+      const delay = Math.max(0, minimumDisplay - elapsed);
+      if (delay === 0) {
+        this.advanceProgressQueue();
+        return;
+      }
+
+      progressTimer = setTimeout(() => {
+        progressTimer = null;
+        this.advanceProgressQueue();
+      }, delay);
+    },
+
+    advanceProgressQueue() {
+      if (!this.isConverting) {
+        clearProgressQueue();
+        return;
+      }
+
+      if (progressQueue.length) {
+        const group = progressQueue.shift();
+        const progress = group.updates.shift();
+        if (filenameTimer !== null) clearTimeout(filenameTimer);
+        filenameTimer = null;
+        activeFilenameProgress = group.updates.map((update, index, updates) => ({
+          ...update,
+          displayPosition: (index + 1) / (updates.length + 1),
+        }));
+        activeProgressPhase = progress.phase;
+        activePhaseStartedAt = performance.now();
+        this.updateProgress(progress);
+        this.scheduleFilenameProgress();
+        this.scheduleProgressAdvance();
+        return;
+      }
+
+      if (pendingCompletion) {
+        const message = pendingCompletion;
+        clearProgressQueue();
+        this.finishConversion(message);
+      }
     },
 
     finishConversion(message) {
@@ -311,6 +487,7 @@ createApp({
         useJieba: this.useJieba,
         state: this.state,
       });
+      clearProgressQueue();
       terminateWorker();
       this.fileHeading = t("app.result.failed");
       this.fileDescription = message;
@@ -320,8 +497,8 @@ createApp({
     },
 
     handleWorkerMessage(event) {
-      if (event.data?.type === "progress") this.updateProgress(event.data);
-      if (event.data?.type === "complete") this.finishConversion(event.data);
+      if (event.data?.type === "progress") this.queueProgress(event.data);
+      if (event.data?.type === "complete") this.queueCompletion(event.data);
       if (event.data?.type === "error") {
         const detail = event.data.error.entryName ? `（${event.data.error.entryName}）` : "";
         this.failConversion(`${event.data.error.message}${detail}`, event.data.error);
@@ -330,6 +507,7 @@ createApp({
 
     cancelConversion() {
       if (!this.isConverting || !selectedFile) return;
+      clearProgressQueue();
       terminateWorker();
       this.fileHeading = selectedFile.name;
       this.fileDescription = t("app.file.size", { size: humanFileSize(selectedFile.size) });

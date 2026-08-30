@@ -49,6 +49,13 @@ function extensionOf(filename) {
   return match ? match[1].toLowerCase() : "";
 }
 
+function isConvertibleFile(entry) {
+  return !entry.directory && (
+    CONVERTIBLE_EXTENSIONS.has(extensionOf(entry.filename)) ||
+    entry.filename === "META-INF/container.xml"
+  );
+}
+
 function assertSafeOutputPath(filename) {
   const parts = filename.split("/");
   if (
@@ -258,10 +265,11 @@ export async function convertEpub({ bytes, filename, config, converter, onProgre
     const outputEntries = [];
     const outputNames = new Set();
     const workEntries = entries.filter((entry) => entry.filename !== "mimetype");
+    const conversionTotal = workEntries.filter(isConvertibleFile).length;
+    let conversionCurrent = 0;
 
-    for (let index = 0; index < workEntries.length; index += 1) {
-      const entry = workEntries[index];
-      report(onProgress, "converting", index, workEntries.length, t("epub.progress.processing", { filename: entry.filename }));
+    for (const entry of workEntries) {
+      const convertible = isConvertibleFile(entry);
 
       const convertedName = await convertOpenCcText(converter, entry.filename, entry.filename, "path");
       assertSafeOutputPath(convertedName);
@@ -276,21 +284,20 @@ export async function convertEpub({ bytes, filename, config, converter, onProgre
       }
 
       let entryBytes = await readEntryBytes(entry);
-      if (
-        CONVERTIBLE_EXTENSIONS.has(extensionOf(entry.filename)) ||
-        entry.filename === "META-INF/container.xml"
-      ) {
+      if (convertible) {
+        report(onProgress, "converting", conversionCurrent, conversionTotal, t("epub.progress.processing", { filename: entry.filename }));
         const decoded = decodeUtf8(entryBytes, entry.filename);
         let convertedText = await convertOpenCcText(converter, decoded.text, entry.filename);
         if (extensionOf(entry.filename) === "opf") {
           convertedText = updatePackageLanguage(convertedText, config);
         }
         entryBytes = encodeUtf8(convertedText, decoded.hasBom);
+        conversionCurrent += 1;
       }
       outputEntries.push({ entry, filename: convertedName, bytes: entryBytes });
     }
 
-    report(onProgress, "writing", 0, outputEntries.length + 1, t("epub.progress.building"));
+    report(onProgress, "building", 0, 1, t("epub.progress.building"));
     const zipWriter = new ZipWriter(new Uint8ArrayWriter(), {
       level: 6,
       useWebWorkers: false,
@@ -313,7 +320,7 @@ export async function convertEpub({ bytes, filename, config, converter, onProgre
       };
       const reader = outputEntry.entry.directory ? undefined : new Uint8ArrayReader(outputEntry.bytes);
       await zipWriter.add(outputEntry.filename, reader, options);
-      report(onProgress, "writing", index + 1, outputEntries.length + 1, t("epub.progress.compressing", { filename: outputEntry.filename }));
+      report(onProgress, "compressing", index + 1, outputEntries.length, t("epub.progress.compressing", { filename: outputEntry.filename }));
     }
 
     const outputBytes = await zipWriter.close();

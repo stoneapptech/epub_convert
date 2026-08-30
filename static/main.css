@@ -116,7 +116,23 @@ footer.ts-content,
 }
 
 #progress-label {
+  min-height: 1.5em;
   overflow-wrap: anywhere;
+}
+
+.progress-filename-enter-active,
+.progress-filename-leave-active {
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.progress-filename-enter-from {
+  opacity: 0;
+  transform: translateY(0.2rem);
+}
+
+.progress-filename-leave-to {
+  opacity: 0;
+  transform: translateY(-0.2rem);
 }
 
 #snackbar {

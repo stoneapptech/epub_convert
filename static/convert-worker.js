@@ -1,11 +1,24 @@
-import OpenCC from "../vendor/opencc-wasm/esm/index.js";
 import { convertEpub } from "./epub-converter.js";
 import { t } from "./i18n.js";
 
 const converters = new Map();
+let openCcModulePromise = null;
 
-async function getConverter(config) {
+async function getConverter(config, onProgress) {
+  onProgress({
+    phase: "initializing-opencc",
+    percent: 0,
+    label: t("worker.progress.loadingOpenCC"),
+  });
+  openCcModulePromise ??= import("../vendor/opencc-wasm/esm/index.js");
+  const { default: OpenCC } = await openCcModulePromise;
+
   if (!converters.has(config)) {
+    onProgress({
+      phase: "initializing-dictionary",
+      percent: 0,
+      label: t("worker.progress.loadingDictionary"),
+    });
     const converter = OpenCC.Converter({ config });
     converters.set(config, converter);
     await converter("");
@@ -43,17 +56,17 @@ self.addEventListener("message", async (event) => {
   };
 
   try {
-    self.postMessage({ type: "progress", ...progressContext });
-    const converter = await getConverter(config);
+    const sendProgress = (progress) => {
+      progressContext = progress;
+      self.postMessage({ type: "progress", ...progress });
+    };
+    const converter = await getConverter(config, sendProgress);
     const result = await convertEpub({
       bytes,
       filename,
       config,
       converter,
-      onProgress: (progress) => {
-        progressContext = progress;
-        self.postMessage({ type: "progress", ...progress });
-      },
+      onProgress: sendProgress,
     });
     const outputBuffer = result.bytes.buffer.slice(
       result.bytes.byteOffset,
