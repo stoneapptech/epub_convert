@@ -26,6 +26,14 @@ if (!html.includes('id="auto-download-switch"')) {
     throw new Error("The auto-download switch is missing.");
 }
 
+if (!html.includes('id="fast-mode-switch"') || !html.includes('<span v-if="fastMode">{{ progressLabel }}</span>')) {
+    throw new Error("Fast mode must render progress labels without Vue transitions.");
+}
+
+if ((html.match(/@click\.stop\.prevent="toggleTooltip"/g) || []).length < 2) {
+    throw new Error("Summary tooltip clicks must not toggle the settings accordion.");
+}
+
 if (!html.includes("canEditSelection && selectedBooks.length > 1") || !html.includes("class=\"ts-chip is-outlined\"") || !html.includes("removeSelectedFile(index)")) {
     throw new Error("Selected EPUBs must use removable Tocas chips.");
 }

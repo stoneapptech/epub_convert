@@ -84,8 +84,13 @@ footer.ts-content,
   margin-top: 1rem;
 }
 
-.auto-download-summary {
+.summary-switches {
   margin-inline-start: auto;
+}
+
+.ts-progress.is-fast,
+.ts-progress.is-fast .bar {
+  transition: none;
 }
 
 #dropzone.is-hollowed:hover {
@@ -170,6 +175,18 @@ footer.ts-content,
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 767.98px) {
+  #settings-details summary {
+    flex-wrap: wrap;
+  }
+
+  .summary-switches {
+    flex-basis: 100%;
+    justify-content: flex-end;
+    margin-top: var(--ts-space-gap-small);
   }
 }
 

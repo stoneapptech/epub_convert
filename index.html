@@ -36,7 +36,23 @@
           <summary>
             <span class="ts-icon is-gears-icon is-end-spaced" aria-hidden="true"></span> 轉換設定
             <span v-for="setting in settingsSummary" :key="setting" class="ts-chip is-small is-start-spaced">{{ setting }}</span>
-            <span class="ts-wrap is-compact is-middle-aligned auto-download-summary" @click.stop @keydown.stop>
+            <span class="ts-wrap is-compact is-middle-aligned summary-switches" @click.stop @keydown.stop>
+            <span class="ts-wrap is-compact is-middle-aligned fast-mode-summary">
+              <label class="ts-switch" tabindex="0">
+                <input type="checkbox" id="fast-mode-switch" v-model="fastMode" :disabled="isConverting" :aria-description="t('app.fastMode.help')">
+                {{ t("app.fastMode.label") }}
+              </label>
+              <span
+                class="ts-icon is-circle-question-icon"
+                tabindex="0"
+                role="button"
+                :aria-label="t('app.fastMode.help')"
+                :data-tooltip="t('app.fastMode.help')"
+                data-trigger="hover"
+                @click.stop.prevent="toggleTooltip"
+              ></span>
+            </span>
+            <span class="ts-wrap is-compact is-middle-aligned auto-download-summary">
               <label class="ts-switch" tabindex="0">
                 <input type="checkbox" id="auto-download-switch" v-model="autoDownload" :disabled="isConverting" :aria-description="t('app.autoDownload.help')">
                 {{ t("app.autoDownload.label") }}
@@ -48,10 +64,9 @@
                 :aria-label="t('app.autoDownload.help')"
                 :data-tooltip="t('app.autoDownload.help')"
                 data-trigger="hover"
-                @click="toggleTooltip"
-                @keydown.enter.prevent="toggleTooltip"
-                @keydown.space.prevent="toggleTooltip"
+                @click.stop.prevent="toggleTooltip"
               ></span>
+            </span>
             </span>
           </summary>
           <fieldset class="ts-fieldset">
@@ -142,13 +157,14 @@
               </a>
             </div>
             <div v-if="isConverting" class="action" id="progress-area">
-              <div class="ts-progress has-top-spaced" :class="progressClass" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progressPercent">
+              <div class="ts-progress has-top-spaced" :class="[progressClass, { 'is-fast': fastMode }]" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progressPercent">
                 <div class="bar" :style="{ '--value': progressPercent }">
                   <div class="text" id="progress-value">{{ progressPercent }}%</div>
                 </div>
               </div>
               <div class="ts-text is-secondary has-top-spaced-small" id="progress-label" aria-live="polite">
-                <Transition name="progress-filename" mode="out-in">
+                <span v-if="fastMode">{{ progressLabel }}</span>
+                <Transition v-else name="progress-filename" mode="out-in">
                   <span :key="progressLabel">{{ progressLabel }}</span>
                 </Transition>
               </div>

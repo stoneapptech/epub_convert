@@ -145,6 +145,7 @@ createApp({
       useWordConversion: false,
       useJieba: false,
       autoDownload: false,
+      fastMode: false,
       selectedBooks: [],
       progressDeterminate: false,
       progressPercent: 0,
@@ -462,7 +463,7 @@ createApp({
     },
 
     queueProgress(progress) {
-      if (reducedMotion.matches) {
+      if (reducedMotion.matches || this.fastMode) {
         this.updateProgress(progress);
         return;
       }
@@ -507,7 +508,7 @@ createApp({
     },
 
     queueCompletion(message) {
-      if (reducedMotion.matches) {
+      if (reducedMotion.matches || this.fastMode) {
         this.finishCurrentFile(message);
         return;
       }

@@ -1,4 +1,6 @@
 export default Object.freeze({
+  "app.fastMode.label": "星爆模式",
+  "app.fastMode.help": "關閉進度動畫與顯示延遲。",
   "app.file.remove": "移除 {filename}",
   "app.file.selectedBooks": "已選擇的 EPUB",
   "app.file.selectedMany": "已選擇 {count} 個 EPUB",
