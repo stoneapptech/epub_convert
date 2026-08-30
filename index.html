@@ -27,14 +27,9 @@
     <main class="ts-app-center has-vertically-padded" id="main">
       <div class="ts-container">
 
-        <!-- <div class="ts-notice is-outlined" role="note">
-          <span class="title">隱私</span>
-          <span class="content">檔案不會上傳到伺服器。轉換完成前請勿關閉此頁面。</span>
-        </div> -->
-
         <details class="ts-accordion has-bottom-spaced" id="settings-details">
           <summary>
-            <span class="ts-icon is-gears-icon is-end-spaced" aria-hidden="true"></span> 轉換設定
+            <span class="ts-icon is-gears-icon is-end-spaced" aria-hidden="true"></span> {{ t("app.settings.title") }}
             <span v-for="setting in settingsSummary" :key="setting" class="ts-chip is-small is-start-spaced">{{ setting }}</span>
             <span class="ts-wrap is-compact is-middle-aligned summary-switches" @click.stop @keydown.stop>
             <span class="ts-wrap is-compact is-middle-aligned fast-mode-summary">
@@ -72,15 +67,15 @@
           <fieldset class="ts-fieldset">
             <div class="ts-grid is-top-aligned is-stackable mobile:is-stacked">
               <div class="column is-4-wide">
-                <div class="ts-text is-label has-bottom-spaced-small" id="conversion-direction-label">轉換方向</div>
+                <div class="ts-text is-label has-bottom-spaced-small" id="conversion-direction-label">{{ t("app.direction.label") }}</div>
                 <div class="ts-selection is-fluid" role="radiogroup" aria-labelledby="conversion-direction-label">
                   <label class="item">
-                    <input type="radio" name="conversion-direction" :value="false" v-model="convertToSimplified":disabled="isConverting">
-                    <span class="text">简 → 繁</span>
+                    <input type="radio" name="conversion-direction" :value="false" v-model="convertToSimplified" :disabled="isConverting">
+                    <span class="text">{{ t("app.summary.s2t") }}</span>
                   </label>
                   <label class="item">
                     <input type="radio" name="conversion-direction" :value="true" v-model="convertToSimplified" :disabled="isConverting">
-                    <span class="text">繁 → 简</span>
+                    <span class="text">{{ t("app.summary.t2s") }}</span>
                   </label>
                 </div>
               </div>
@@ -91,21 +86,21 @@
                 <div class="ts-selection is-fluid" role="radiogroup" aria-labelledby="conversion-region-label" :aria-description="conversionRegionHelp">
                   <label class="item">
                     <input type="radio" name="conversion-region" value="standard" v-model="conversionRegion" :disabled="isConverting">
-                    <span class="text"><span class="ts-icon is-globe-icon is-end-spaced" aria-hidden="true"></span>預設</span>
+                    <span class="text"><span class="ts-icon is-globe-icon is-end-spaced" aria-hidden="true"></span>{{ t("app.summary.region.standard") }}</span>
                   </label>
                   <label class="item">
                     <input type="radio" name="conversion-region" value="tw" v-model="conversionRegion" :disabled="isConverting">
-                    <span class="text"><span class="ts-flag is-taiwan-flag is-end-spaced" aria-hidden="true"></span>台灣</span>
+                    <span class="text"><span class="ts-flag is-taiwan-flag is-end-spaced" aria-hidden="true"></span>{{ t("app.summary.region.tw") }}</span>
                   </label>
                   <label class="item">
                     <input type="radio" name="conversion-region" value="hk" v-model="conversionRegion" :disabled="isConverting">
-                    <span class="text"><span class="ts-flag is-hong-kong-flag is-end-spaced" aria-hidden="true"></span>香港</span>
+                    <span class="text"><span class="ts-flag is-hong-kong-flag is-end-spaced" aria-hidden="true"></span>{{ t("app.summary.region.hk") }}</span>
                   </label>
                 </div>
               </div>
               <div class="column is-4-wide">
                 <div class="ts-text is-label has-bottom-spaced-small" id="word-conversion-label">
-                  地區用詞 <span class="ts-icon is-circle-question-icon is-start-spaced" :data-tooltip="wordConversionHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true"></span>
+                  {{ t("app.words.header") }} <span class="ts-icon is-circle-question-icon is-start-spaced" :data-tooltip="wordConversionHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true"></span>
                 </div>
                 <label class="ts-switch" tabindex="0">
                   <input type="checkbox" id="word-conversion-switch" v-model="useWordConversion" :disabled="!wordConversionSupported || isConverting" :aria-description="wordConversionHelp">
@@ -113,11 +108,11 @@
                 </label>
                 <template v-if="jiebaSupported">
                   <div class="ts-text is-label has-top-spaced-small has-bottom-spaced-small" :data-tooltip="jiebaHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true">
-                    進階斷詞 <span class="ts-icon is-circle-question-icon is-start-spaced" aria-hidden="true"></span>
+                    {{ t("app.jieba.header") }} <span class="ts-icon is-circle-question-icon is-start-spaced" aria-hidden="true"></span>
                   </div>
                   <label class="ts-switch" tabindex="0">
                     <input type="checkbox" id="jieba-switch" v-model="useJieba" :disabled="isConverting" :aria-description="jiebaHelp">
-                    使用斷詞
+                    {{ t("app.jieba.label") }}
                   </label>
                 </template>
               </div>
@@ -150,7 +145,7 @@
             </div>
             <div v-if="hasFile && !isConverting" class="action ts-wrap is-center-aligned">
               <button v-if="!downloads.length" class="ts-button is-start-icon" id="convert-button" type="button" @click="startConversion">
-                <span class="ts-icon is-wand-magic-sparkles-icon" aria-hidden="true"></span> 開始轉換
+                <span class="ts-icon is-wand-magic-sparkles-icon" aria-hidden="true"></span> {{ t("app.action.convert") }}
               </button>
               <a v-for="download in downloads" :key="download.url" class="ts-button is-secondary is-outlined is-start-icon" :href="download.url" :download="download.filename">
                 <span class="ts-icon is-download-icon" aria-hidden="true"></span> {{ download.filename }}
@@ -159,7 +154,7 @@
             <div v-if="isConverting" class="action" id="progress-area">
               <div class="ts-progress has-top-spaced" :class="[progressClass, { 'is-fast': fastMode }]" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progressPercent">
                 <div class="bar" :style="{ '--value': progressPercent }">
-                  <div class="text" id="progress-value">{{ progressPercent }}%</div>
+                  <div class="text" id="progress-value">{{ t("app.progress.percent", { percent: progressPercent }) }}</div>
                 </div>
               </div>
               <div class="ts-text is-secondary has-top-spaced-small" id="progress-label" aria-live="polite">
@@ -175,7 +170,7 @@
         <div v-if="failures.length" class="ts-notice is-negative is-outlined has-top-spaced" role="status">
           <div class="title">{{ t("app.batch.failuresTitle", { count: failures.length }) }}</div>
           <div class="content">
-            <div v-for="(failure, index) in failures" :key="`${failure.filename}-${index}`"><strong>{{ failure.filename }}</strong>：{{ failure.message }}</div>
+            <div v-for="(failure, index) in failures" :key="`${failure.filename}-${index}`">{{ t("app.batch.failureItem", failure) }}</div>
           </div>
         </div>
       </div>
@@ -197,7 +192,7 @@
     <div class="snackbar-container" aria-live="assertive">
       <div v-if="snackbarVisible" class="ts-snackbar" id="snackbar">
         <div class="content" id="snackbar-content">{{ snackbarMessage }}</div>
-        <button class="close" id="snackbar-close" type="button" aria-label="關閉通知" @click="hideSnackbar"></button>
+        <button class="close" id="snackbar-close" type="button" :aria-label="t('app.snackbar.close')" @click="hideSnackbar"></button>
       </div>
     </div>
   </div>

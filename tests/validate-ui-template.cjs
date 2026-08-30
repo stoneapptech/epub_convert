@@ -3,6 +3,11 @@ const { compile } = require("@vue/compiler-dom");
 
 const html = readFileSync("index.html", "utf8").replaceAll("\r\n", "\n");
 const appSource = readFileSync("static/app.js", "utf8");
+
+const mainHtml = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+if (/\p{Script=Han}/u.test(mainHtml)) {
+    throw new Error("User-facing Chinese strings in <main> must be stored in the locale catalog.");
+}
 const opening = '<div id="app" v-cloak>';
 const start = html.indexOf(opening);
 const bodyEnd = html.lastIndexOf("</body>");

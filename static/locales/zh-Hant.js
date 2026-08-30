@@ -1,4 +1,13 @@
 export default Object.freeze({
+  "app.settings.title": "轉換設定",
+  "app.direction.label": "轉換方向",
+  "app.words.header": "地區用詞",
+  "app.jieba.header": "進階斷詞",
+  "app.jieba.label": "使用斷詞",
+  "app.action.convert": "開始轉換",
+  "app.snackbar.close": "關閉通知",
+  "app.progress.percent": "{percent}%",
+  "app.batch.failureItem": "{filename}：{message}",
   "app.fastMode.label": "星爆模式",
   "app.fastMode.help": "關閉進度動畫與顯示延遲。",
   "app.file.remove": "移除 {filename}",
