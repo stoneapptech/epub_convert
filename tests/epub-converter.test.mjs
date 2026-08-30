@@ -5,9 +5,17 @@ import OpenCC from "opencc-wasm";
 import {
     EpubConversionError,
     convertOpenCcText,
+    isAcceptedEpubMimetype,
 } from "../static/epub-converter.js";
 
 const utf8Encoder = new TextEncoder();
+
+test("EPUB mimetype validation tolerates whitespace and ASCII case", () => {
+    assert.equal(isAcceptedEpubMimetype("application/epub+zip"), true);
+    assert.equal(isAcceptedEpubMimetype("\uFEFF  Application/EPUB+ZIP\r\n"), true);
+    assert.equal(isAcceptedEpubMimetype("application/zip"), false);
+    assert.equal(isAcceptedEpubMimetype(""), false);
+});
 
 test("large OpenCC input is converted in safe UTF-8 chunks", async () => {
     const input = `${"简体中文🙂，软件转换。".repeat(8_000)}结尾`;

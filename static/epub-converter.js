@@ -16,6 +16,11 @@ const OPENCC_CHUNK_BYTES = 16 * 1024;
 const utf8Decoder = new TextDecoder("utf-8", { fatal: true });
 const utf8Encoder = new TextEncoder();
 
+export function isAcceptedEpubMimetype(value) {
+  return typeof value === "string"
+    && value.trim().toLowerCase() === EPUB_MIMETYPE;
+}
+
 configure({
   useWebWorkers: false,
   useCompressionStream: false,
@@ -242,7 +247,7 @@ export async function convertEpub({ bytes, filename, config, converter, onProgre
 
     const mimetypeBytes = await readEntryBytes(mimetypeEntry);
     const { text: mimetype } = decodeUtf8(mimetypeBytes, "mimetype");
-    if (mimetype !== EPUB_MIMETYPE) {
+    if (!isAcceptedEpubMimetype(mimetype)) {
       throw new EpubConversionError("invalid-epub", t("epub.error.invalidArchive"), "mimetype");
     }
 
