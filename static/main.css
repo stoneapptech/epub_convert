@@ -81,7 +81,7 @@ footer.ts-content,
 }
 
 .failure-list {
-  max-height: 12rem;
+  max-height: 6rem;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
