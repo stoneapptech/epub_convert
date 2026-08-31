@@ -143,7 +143,7 @@ createApp({
       fileIcon: "is-book-medical-icon",
       convertToSimplified: false,
       conversionRegion: "tw",
-      useWordConversion: false,
+      useWordConversion: true,
       useJieba: false,
       autoDownload: false,
       fastMode: false,

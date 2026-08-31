@@ -31,7 +31,7 @@ export default Object.freeze({
   "app.progress.converting": "正在轉換…",
   "app.region.inputLabel": "輸入用字",
   "app.region.outputLabel": "輸出用字",
-  "app.region.inputHelp": "選擇繁體輸入的地區用字，例：「心裡」選台灣，「心裏」選香港",
+  "app.region.inputHelp": "選擇繁體輸入的地區用字，例：「心裡」(台灣)，「心裏」(香港)",
   "app.region.outputHelp": "選擇繁體輸出的地區用字，例：「心里」輸出「心裡」(台灣)；輸出「心裏」(香港)",
   "app.summary.s2t": "简 → 繁",
   "app.summary.t2s": "繁 → 简",
