@@ -99,16 +99,16 @@ footer.ts-content,
   transition: none;
 }
 
-#dropzone.is-hollowed:hover {
+#dropzone:has(#file-panel.is-interactive).is-hollowed:hover {
   border-color: var(--ts-gray-400);
 }
 
-#dropzone.is-hollowed:active,
-#dropzone.is-dragover {
+#dropzone:has(#file-panel.is-interactive).is-hollowed:active,
+#dropzone:has(#file-panel.is-interactive).is-dragover {
   border-color: var(--ts-gray-500);
 }
 
-#dropzone.is-dragover {
+#dropzone:has(#file-panel.is-interactive).is-dragover {
   background-color: var(--ts-gray-75);
 }
 
