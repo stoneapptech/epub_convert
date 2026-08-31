@@ -1,5 +1,12 @@
 import { resolveConfig, resolveMode, supportsJieba, supportsWordConversion } from "./modes.js";
 import { t } from "./i18n.js";
+import {
+  CustomDictionaryError,
+  mergeDictionaryLibraries,
+  parseCustomDictionary,
+  parseDictionaryLibrary,
+  serializeDictionaryLibrary,
+} from "./custom-dictionaries.js";
 
 if (!globalThis.Vue) {
   throw new Error("Vue failed to load.");
@@ -7,6 +14,7 @@ if (!globalThis.Vue) {
 
 const { createApp } = globalThis.Vue;
 const THEME_STORAGE_KEY = "epub-convert-theme";
+const CUSTOM_DICTIONARY_STORAGE_KEY = "epub-convert-custom-dictionaries";
 const MIN_STAGE_DISPLAY_MS = 500;
 const MIN_CONVERSION_STAGE_DISPLAY_MS = 2000;
 const FILENAME_TRANSITION_MS = 240;
@@ -23,6 +31,7 @@ const ConversionState = Object.freeze({
 const ProgressPhaseIcon = Object.freeze({
   "initializing-opencc": "is-microchip-icon",
   "initializing-dictionary": "is-book-open-icon",
+  "initializing-custom-dictionary": "is-spell-check-icon",
   reading: "is-magnifying-glass-icon",
   converting: "is-language-icon",
   building: "is-file-circle-plus-icon",
@@ -34,6 +43,9 @@ let selectedFiles = [];
 let currentFile = null;
 let batchIndex = 0;
 let batchConfig = null;
+let batchCustomDictionary = null;
+let activeCustomDictionaryEntries = [];
+let customDictionaryRevision = 0;
 let nextSelectedFileId = 0;
 let worker = null;
 const downloadObjectUrls = new Set();
@@ -147,6 +159,15 @@ createApp({
       useJieba: false,
       autoDownload: false,
       fastMode: false,
+      customDictionaryEnabled: false,
+      customDictionaryName: "",
+      customDictionaryEntryCount: 0,
+      customDictionaryText: "",
+      dictionaryDraftEnabled: false,
+      dictionaryDraftName: "",
+      dictionaryDraftText: "",
+      selectedSavedDictionary: "",
+      savedDictionaries: [],
       selectedBooks: [],
       progressDeterminate: false,
       progressPercent: 0,
@@ -187,7 +208,23 @@ createApp({
         region,
         conversion,
         this.useJieba ? t("app.summary.segmentation") : null,
+        this.customDictionaryEnabled ? t("app.summary.customDictionary") : null,
       ].filter(Boolean);
+    },
+    customDictionaryStatus() {
+      if (!this.customDictionaryEnabled) return t("app.dictionary.statusDisabled");
+      return t("app.dictionary.statusEnabled", {
+        name: this.customDictionaryName || t("app.dictionary.unnamed"),
+        count: this.customDictionaryEntryCount,
+      });
+    },
+    dictionaryChanged() {
+      const saved = this.savedDictionaries.find(
+        ({ name }) => name === this.selectedSavedDictionary,
+      );
+      const name = this.dictionaryDraftName.trim();
+      if (!saved) return Boolean(name || this.dictionaryDraftText);
+      return name !== saved.name || this.dictionaryDraftText !== saved.text;
     },
     mode() {
       return resolveMode(this.conversionDirection, this.conversionRegion, this.useWordConversion);
@@ -247,6 +284,7 @@ createApp({
     pageHideListener = () => this.cleanup();
     window.addEventListener("beforeunload", beforeUnloadListener);
     window.addEventListener("pagehide", pageHideListener);
+    this.loadDictionaryLibrary();
   },
 
   beforeUnmount() {
@@ -295,12 +333,193 @@ createApp({
       clearTimeout(snackbarTimer);
       this.snackbarMessage = message;
       this.snackbarVisible = true;
+      this.$nextTick(() => this.raiseSnackbar());
       snackbarTimer = setTimeout(() => this.hideSnackbar(), 6000);
+    },
+
+    raiseSnackbar() {
+      const container = this.$refs.snackbarContainer;
+      if (typeof container?.showPopover !== "function") return;
+      if (container.matches(":popover-open")) container.hidePopover();
+      container.showPopover();
     },
 
     hideSnackbar() {
       clearTimeout(snackbarTimer);
+      const container = this.$refs.snackbarContainer;
+      if (typeof container?.hidePopover === "function"
+        && container.matches(":popover-open")) {
+        container.hidePopover();
+      }
       this.snackbarVisible = false;
+    },
+
+    dictionaryErrorMessage(error) {
+      const code = error instanceof CustomDictionaryError ? error.code : "invalid-library";
+      const keyByCode = {
+        "invalid-text": "app.dictionary.error.invalidText",
+        "too-large": "app.dictionary.error.tooLarge",
+        "invalid-entry": "app.dictionary.error.invalidEntry",
+        "duplicate-source": "app.dictionary.error.duplicateSource",
+        "too-many-entries": "app.dictionary.error.tooManyEntries",
+        "invalid-library": "app.dictionary.error.invalidLibrary",
+        "invalid-name": "app.dictionary.error.invalidName",
+        "too-many-dictionaries": "app.dictionary.error.tooManyDictionaries",
+        empty: "app.dictionary.error.empty",
+      };
+      return t(keyByCode[code] || "app.dictionary.error.invalidLibrary", {
+        line: error?.line || 0,
+      });
+    },
+
+    loadDictionaryLibrary() {
+      try {
+        const saved = localStorage.getItem(CUSTOM_DICTIONARY_STORAGE_KEY);
+        this.savedDictionaries = saved ? parseDictionaryLibrary(saved) : [];
+      } catch (error) {
+        console.error("[EPUB converter] Could not load custom dictionaries", error);
+        this.savedDictionaries = [];
+        this.showSnackbar(this.dictionaryErrorMessage(error));
+      }
+    },
+
+    persistDictionaryLibrary(dictionaries) {
+      try {
+        localStorage.setItem(
+          CUSTOM_DICTIONARY_STORAGE_KEY,
+          serializeDictionaryLibrary(dictionaries),
+        );
+        this.savedDictionaries = dictionaries;
+        return true;
+      } catch (error) {
+        console.error("[EPUB converter] Could not save custom dictionaries", error);
+        this.showSnackbar(error instanceof CustomDictionaryError
+          ? this.dictionaryErrorMessage(error)
+          : t("app.dictionary.error.storage"));
+        return false;
+      }
+    },
+
+    openCustomDictionaryDialog() {
+      this.dictionaryDraftEnabled = this.customDictionaryEnabled;
+      this.dictionaryDraftName = this.customDictionaryName;
+      this.dictionaryDraftText = this.customDictionaryText;
+      this.selectedSavedDictionary = this.savedDictionaries.some(
+        ({ name }) => name === this.customDictionaryName,
+      ) ? this.customDictionaryName : "";
+      this.$refs.customDictionaryDialog.showModal();
+      if (this.snackbarVisible) this.$nextTick(() => this.raiseSnackbar());
+    },
+
+    closeCustomDictionaryDialog() {
+      this.$refs.customDictionaryDialog.close();
+    },
+
+    commitCustomDictionary(enabled) {
+      const entries = enabled ? parseCustomDictionary(this.dictionaryDraftText) : [];
+      if (enabled && !entries.length) throw new CustomDictionaryError("empty");
+      this.customDictionaryEnabled = enabled;
+      this.customDictionaryName = this.dictionaryDraftName.trim();
+      this.customDictionaryText = this.dictionaryDraftText;
+      this.customDictionaryEntryCount = entries.length;
+      activeCustomDictionaryEntries = entries.map((entry) => [...entry]);
+      customDictionaryRevision += 1;
+    },
+
+    applyCustomDictionary() {
+      try {
+        this.commitCustomDictionary(this.dictionaryDraftEnabled);
+        this.closeCustomDictionaryDialog();
+        this.showSnackbar(t(this.customDictionaryEnabled
+          ? "app.dictionary.applied"
+          : "app.dictionary.disabled"));
+      } catch (error) {
+        this.showSnackbar(this.dictionaryErrorMessage(error));
+      }
+    },
+
+    saveCustomDictionary() {
+      try {
+        const name = this.dictionaryDraftName.trim();
+        if (!name || name.length > 100) throw new CustomDictionaryError("invalid-name");
+        const entries = parseCustomDictionary(this.dictionaryDraftText);
+        if (!entries.length) throw new CustomDictionaryError("empty");
+
+        const dictionaries = this.savedDictionaries.map((dictionary) => ({ ...dictionary }));
+        const existingIndex = dictionaries.findIndex((dictionary) => dictionary.name === name);
+        const record = { name, text: this.dictionaryDraftText };
+        if (existingIndex >= 0) dictionaries.splice(existingIndex, 1, record);
+        else dictionaries.push(record);
+        if (!this.persistDictionaryLibrary(dictionaries)) return;
+        this.dictionaryDraftName = name;
+        this.selectedSavedDictionary = name;
+        this.showSnackbar(t("app.dictionary.saved", { name }));
+      } catch (error) {
+        this.showSnackbar(this.dictionaryErrorMessage(error));
+      }
+    },
+
+    loadSavedDictionary() {
+      const dictionary = this.savedDictionaries.find(
+        ({ name }) => name === this.selectedSavedDictionary,
+      );
+      if (!dictionary) return;
+      this.dictionaryDraftName = dictionary.name;
+      this.dictionaryDraftText = dictionary.text;
+      this.dictionaryDraftEnabled = true;
+      this.showSnackbar(t("app.dictionary.loaded", { name: dictionary.name }));
+    },
+
+    deleteSavedDictionary() {
+      if (!this.selectedSavedDictionary) return;
+      const name = this.selectedSavedDictionary;
+      const dictionaries = this.savedDictionaries.filter(
+        (dictionary) => dictionary.name !== name,
+      );
+      if (!this.persistDictionaryLibrary(dictionaries)) return;
+      this.selectedSavedDictionary = "";
+      this.showSnackbar(t("app.dictionary.deleted", { name }));
+    },
+
+    openDictionaryImport() {
+      this.$refs.dictionaryImportInput.click();
+    },
+
+    async importDictionaries(event) {
+      const [file] = event.target.files;
+      if (!file) return;
+      try {
+        const imported = parseDictionaryLibrary(await file.text());
+        const dictionaries = mergeDictionaryLibraries(this.savedDictionaries, imported);
+        if (!this.persistDictionaryLibrary(dictionaries)) return;
+        this.showSnackbar(t("app.dictionary.imported", { count: imported.length }));
+      } catch (error) {
+        this.showSnackbar(this.dictionaryErrorMessage(error));
+      } finally {
+        event.target.value = "";
+      }
+    },
+
+    exportDictionaries() {
+      try {
+        if (!this.savedDictionaries.length) throw new CustomDictionaryError("empty-library");
+        const blob = new Blob(
+          [serializeDictionaryLibrary(this.savedDictionaries)],
+          { type: "application/json" },
+        );
+        const url = URL.createObjectURL(blob);
+        this.triggerDownload({ url, filename: "opencc-custom-dictionaries.json" });
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        this.showSnackbar(t("app.dictionary.exported", {
+          count: this.savedDictionaries.length,
+        }));
+      } catch (error) {
+        if (error?.code === "empty-library") {
+          this.showSnackbar(t("app.dictionary.error.emptyLibrary"));
+          return;
+        }
+        this.showSnackbar(this.dictionaryErrorMessage(error));
+      }
     },
 
     resetProgress() {
@@ -390,6 +609,7 @@ createApp({
       currentFile = null;
       batchIndex = 0;
       batchConfig = null;
+      batchCustomDictionary = null;
       this.failures = [];
       this.$refs.fileInput.value = "";
       this.state = ConversionState.EMPTY;
@@ -421,6 +641,12 @@ createApp({
       this.fileIcon = "is-language-icon";
       batchIndex = 0;
       batchConfig = resolveConfig(this.mode, this.useJieba);
+      batchCustomDictionary = this.customDictionaryEnabled && activeCustomDictionaryEntries.length
+        ? {
+          id: customDictionaryRevision,
+          entries: activeCustomDictionaryEntries,
+        }
+        : null;
       this.convertNextFile();
     },
 
@@ -447,7 +673,13 @@ createApp({
         const bytes = await currentFile.arrayBuffer();
         if (!worker) this.createWorker();
         worker.postMessage(
-          { type: "convert", bytes, filename: currentFile.name, config: batchConfig },
+          {
+            type: "convert",
+            bytes,
+            filename: currentFile.name,
+            config: batchConfig,
+            customDictionary: batchCustomDictionary,
+          },
           [bytes],
         );
       } catch (error) {
@@ -621,6 +853,7 @@ createApp({
       const failed = this.failures.length;
       currentFile = null;
       batchConfig = null;
+      batchCustomDictionary = null;
       this.fileHeading = success
         ? t("app.batch.complete", { success })
         : t("app.batch.failedAll");
@@ -650,6 +883,7 @@ createApp({
       currentFile = null;
       batchIndex = 0;
       batchConfig = null;
+      batchCustomDictionary = null;
       this.updateSelectionSummary();
       this.fileIcon = "is-book-open-reader-icon";
       this.state = ConversionState.SELECTED;

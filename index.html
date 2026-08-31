@@ -110,6 +110,24 @@
                   <span class="ts-icon is-circle-question-icon is-start-spaced" :data-tooltip="jiebaHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true"></span>
                 </label>
               </div>
+              <div class="column is-8-wide">
+                <div class="ts-text is-label has-bottom-spaced-small" id="custom-dictionary-label">
+                  {{ t("app.dictionary.title") }}
+                  <span
+                    class="ts-icon is-circle-question-icon is-start-spaced"
+                    tabindex="0"
+                    role="button"
+                    :aria-label="t('app.dictionary.help')"
+                    :data-tooltip="t('app.dictionary.help')"
+                    data-trigger="hover focus"
+                    @click.stop.prevent="toggleTooltip"
+                  ></span>
+                </div>
+                <button class="ts-button is-secondary is-outlined is-start-icon" type="button" :disabled="isConverting" @click="openCustomDictionaryDialog">
+                  <span class="ts-icon is-book-atlas-icon" aria-hidden="true"></span>
+                  {{ t("app.dictionary.manage") }}
+                </button>
+                <span class="ts-text is-description has-start-spaced-small" aria-live="polite">{{ customDictionaryStatus }}</span>
               </div>
             </div>
           </fieldset>
@@ -172,6 +190,85 @@
 
     </main>
 
+    <dialog ref="customDictionaryDialog" class="ts-modal is-large" id="custom-dictionary-dialog">
+      <div class="content">
+        <div class="ts-content is-padded">
+          <div class="ts-grid is-middle-aligned">
+            <div class="column is-fluid">
+              <div class="ts-header is-large is-heavy">{{ t("app.dictionary.dialogTitle") }}</div>
+            </div>
+            <div class="column">
+              <button class="ts-close is-end-aligned" type="button" :aria-label="t('app.dictionary.action.close')" @click="closeCustomDictionaryDialog"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ts-divider"></div>
+
+        <div class="ts-content is-padded">
+          <label class="ts-switch">
+            <input type="checkbox" id="custom-dictionary-enabled" v-model="dictionaryDraftEnabled">
+            {{ t("app.dictionary.enabled") }}
+          </label>
+
+          <div class="ts-grid is-bottom-aligned has-vertically-spaced-small">
+            <div class="column is-fluid">
+              <label class="ts-text is-label has-bottom-spaced-small" for="saved-dictionary-select">{{ t("app.dictionary.savedLabel") }}</label>
+              <div class="ts-select is-fluid">
+                <select id="saved-dictionary-select" v-model="selectedSavedDictionary" @change="loadSavedDictionary">
+                  <option value="">{{ t("app.dictionary.chooseSaved") }}</option>
+                  <option v-for="dictionary in savedDictionaries" :key="dictionary.name" :value="dictionary.name">{{ dictionary.name }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="column ts-wrap">
+              <button class="ts-button is-negative is-outlined" type="button" :disabled="!selectedSavedDictionary" @click="deleteSavedDictionary">{{ t("app.dictionary.action.delete") }}</button>
+            </div>
+          </div>
+
+          <div class="ts-grid is-bottom-aligned has-vertically-spaced-small">
+            <div class="column is-fluid">
+              <label class="ts-text is-label" for="custom-dictionary-name">{{ t("app.dictionary.nameLabel") }}</label>
+              <div class="ts-input is-fluid">
+                <input id="custom-dictionary-name" type="text" maxlength="100" v-model="dictionaryDraftName" :placeholder="t('app.dictionary.namePlaceholder')">
+              </div>
+            </div>
+            <div class="column">
+              <button class="ts-button is-secondary" type="button" :disabled="!dictionaryChanged" @click="saveCustomDictionary">{{ t("app.dictionary.action.save") }}</button>
+            </div>
+          </div>
+
+          <label class="ts-text is-label has-top-spaced has-bottom-spaced-small" for="custom-dictionary-entries">{{ t("app.dictionary.entriesLabel") }}</label>
+          <div class="ts-notice is-outlined has-bottom-spaced-small" role="note">
+            <div class="content">{{ t("app.dictionary.formatHelp") }}</div>
+          </div>
+          <div class="ts-input is-fluid">
+            <textarea id="custom-dictionary-entries" rows="12" spellcheck="false" v-model="dictionaryDraftText" :placeholder="t('app.dictionary.entriesPlaceholder')"></textarea>
+          </div>
+
+        </div>
+
+        <div class="ts-divider"></div>
+
+        <div class="ts-content is-padded">
+          <input ref="dictionaryImportInput" type="file" accept=".json,application/json" hidden @change="importDictionaries">
+          <div class="ts-grid is-spaced-between mobile:is-compact">
+            <div class="column ts-wrap mobile:is-compact">
+              <button class="ts-button is-secondary is-outlined is-start-icon" type="button" @click="openDictionaryImport">
+                <span class="ts-icon is-file-import-icon" aria-hidden="true"></span>{{ t("app.dictionary.action.import") }}
+              </button>
+              <button class="ts-button is-secondary is-outlined is-start-icon" type="button" :disabled="!savedDictionaries.length" @click="exportDictionaries">
+                <span class="ts-icon is-file-export-icon" aria-hidden="true"></span>{{ t("app.dictionary.action.export") }}
+              </button>
+            </div>
+            <div class="column ts-wrap mobile:is-compact">
+              <button class="ts-button" type="button" @click="applyCustomDictionary">{{ t("app.dictionary.action.apply") }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
     <footer class="ts-content is-center-aligned is-tertiary">
       <div class="ts-text">EPUB 的簡繁轉換線上工具。支援拖放上傳，且上傳後即刻開始轉換，數秒內即轉換完成。</div>
       <div class="ts-text is-secondary">&copy; Stone App · <a href="https://github.com/stoneapptech/epub_convert">GitHub</a></div>
@@ -184,7 +281,15 @@
       </label>
     </div>
 
-    <div class="snackbar-container" aria-live="assertive">
+    <div
+      ref="snackbarContainer"
+      class="snackbar-container"
+      aria-live="assertive"
+      popover="manual"
+      @pointerdown.stop
+      @mousedown.stop
+      @click.stop
+    >
       <div v-if="snackbarVisible" class="ts-snackbar" id="snackbar">
         <div class="content" id="snackbar-content">{{ snackbarMessage }}</div>
         <button class="close" id="snackbar-close" type="button" :aria-label="t('app.snackbar.close')" @click="hideSnackbar"></button>

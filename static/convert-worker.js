@@ -1,10 +1,11 @@
 import { convertEpub } from "./epub-converter.js";
 import { t } from "./i18n.js";
 
-const converters = new Map();
+const baseConverters = new Map();
+const customConverters = new Map();
 let openCcModulePromise = null;
 
-async function getConverter(config, onProgress) {
+async function getConverter(config, customDictionary, onProgress) {
   if (!openCcModulePromise) {
     onProgress({
       phase: "initializing-opencc",
@@ -15,17 +16,31 @@ async function getConverter(config, onProgress) {
   }
   const { default: OpenCC } = await openCcModulePromise;
 
-  if (!converters.has(config)) {
+  if (!baseConverters.has(config)) {
     onProgress({
       phase: "initializing-dictionary",
       percent: 0,
       label: t("worker.progress.loadingDictionary"),
     });
     const converter = OpenCC.Converter({ config });
-    converters.set(config, converter);
+    baseConverters.set(config, converter);
     await converter("");
   }
-  return converters.get(config);
+  const baseConverter = baseConverters.get(config);
+  if (!customDictionary?.entries?.length) return baseConverter;
+
+  const key = `${config}:${customDictionary.id}`;
+  if (!customConverters.has(key)) {
+    onProgress({
+      phase: "initializing-custom-dictionary",
+      percent: 0,
+      label: t("worker.progress.loadingCustomDictionary"),
+    });
+    const customConverter = OpenCC.CustomConverter(customDictionary.entries);
+    if (customConverters.size >= 20) customConverters.clear();
+    customConverters.set(key, async (text) => customConverter(await baseConverter(text)));
+  }
+  return customConverters.get(key);
 }
 
 function serializeError(error) {
@@ -50,7 +65,7 @@ function serializeError(error) {
 self.addEventListener("message", async (event) => {
   if (event.data?.type !== "convert") return;
 
-  const { bytes, filename, config } = event.data;
+  const { bytes, filename, config, customDictionary } = event.data;
   let progressContext = {
     phase: "initializing",
     percent: 0,
@@ -62,7 +77,7 @@ self.addEventListener("message", async (event) => {
       progressContext = progress;
       self.postMessage({ type: "progress", ...progress });
     };
-    const converter = await getConverter(config, sendProgress);
+    const converter = await getConverter(config, customDictionary, sendProgress);
     const result = await convertEpub({
       bytes,
       filename,

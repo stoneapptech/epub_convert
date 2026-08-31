@@ -35,6 +35,33 @@ if (!html.includes('id="fast-mode-switch"') || !html.includes('<span v-if="fastM
     throw new Error("Fast mode must render progress labels without Vue transitions.");
 }
 
+if (!html.includes('<dialog ref="customDictionaryDialog" class="ts-modal is-large"')
+    || !html.includes('id="custom-dictionary-enabled" v-model="dictionaryDraftEnabled"')
+    || !html.includes('id="saved-dictionary-select" v-model="selectedSavedDictionary" @change="loadSavedDictionary"')
+    || !html.includes('id="custom-dictionary-entries"')) {
+    throw new Error("The custom dictionary editor must use native Tocas form and modal components.");
+}
+
+if (html.includes('@change="toggleCustomDictionary"')
+    || appSource.includes("toggleCustomDictionary()")) {
+    throw new Error("The custom dictionary switch must remain a draft until Apply is used.");
+}
+
+if (!html.includes('@click="applyCustomDictionary"')) {
+    throw new Error("Custom dictionary drafts must be applicable without saving them.");
+}
+
+if ((html.match(/@click="saveCustomDictionary"/g) || []).length !== 1
+    || !html.includes(':disabled="!dictionaryChanged" @click="saveCustomDictionary"')) {
+    throw new Error("Selecting a dictionary must load it automatically, with one adjacent save action.");
+}
+
+if (!appSource.includes("localStorage.setItem(")
+    || !appSource.includes("parseDictionaryLibrary(await file.text())")
+    || !appSource.includes('filename: "opencc-custom-dictionaries.json"')) {
+    throw new Error("Custom dictionaries must support local persistence and JSON import/export.");
+}
+
 if ((html.match(/@click\.stop\.prevent="toggleTooltip"/g) || []).length < 2) {
     throw new Error("Summary tooltip clicks must not toggle the settings accordion.");
 }
@@ -56,6 +83,30 @@ if (!/const MAX_BATCH_FILES = [1-9]\d*;/.test(appSource) || !appSource.includes(
 
 if (!appSource.includes("event.preventDefault();") || !appSource.includes('addEventListener("pagehide"')) {
     throw new Error("Active conversions must guard beforeunload without cleaning up cancelled navigation.");
+}
+
+if (!html.includes('ref="snackbarContainer"')
+    || !html.includes('class="snackbar-container"')
+    || !html.includes('popover="manual"')
+    || !appSource.includes("container.showPopover()")
+    || !appSource.includes("container.hidePopover()")
+    || !appSource.includes("if (this.snackbarVisible) this.$nextTick(() => this.raiseSnackbar())")) {
+    throw new Error("Snackbars must use the browser top layer so they remain visible above dialogs.");
+}
+
+if (!html.includes("@pointerdown.stop")
+    || !html.includes("@mousedown.stop")
+    || !html.includes("@click.stop")) {
+    throw new Error("Snackbar interaction must not reach the dialog backdrop handler.");
+}
+
+const loadSavedDictionary = appSource.slice(
+    appSource.indexOf("loadSavedDictionary()"),
+    appSource.indexOf("deleteSavedDictionary()"),
+);
+if (loadSavedDictionary.includes("commitCustomDictionary")
+    || !loadSavedDictionary.includes("this.dictionaryDraftEnabled = true")) {
+    throw new Error("Loading a saved dictionary must enable its draft without applying it.");
 }
 
 console.log("Vue template compiled successfully.");
