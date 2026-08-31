@@ -2,6 +2,8 @@
 
 EPUB 的簡繁轉換線上工具。支援拖放上傳，且上傳後即刻開始轉換，數秒內即轉換完成。
 
+![Screenshot](docs/Screenshot.png)
+
 立刻體驗: https://epub.stoneapp.tech/
 
 ## 功能
