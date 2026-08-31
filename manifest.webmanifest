@@ -1,8 +1,8 @@
 {
   "id": "./",
   "name": "EPUB 簡繁轉換",
-  "short_name": "EPUB 轉換",
-  "description": "在瀏覽器本機進行 EPUB 簡繁與地區用語轉換。",
+  "short_name": "EPUB 簡繁轉換",
+  "description": "EPUB 的簡繁轉換線上工具。支援拖放上傳，且上傳後即刻開始轉換，數秒內即轉換完成。",
   "lang": "zh-Hant",
   "start_url": "./",
   "scope": "./",
