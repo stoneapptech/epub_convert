@@ -11,7 +11,10 @@ export function createTranslator(locale = DEFAULT_LOCALE) {
 
   return (key, parameters = {}) => {
     const message = catalog[key];
-    if (message === undefined) throw new Error(`Missing translation: ${locale}/${key}`);
+    if (message === undefined) {
+      console.warn(`Missing translation: ${locale}/${key}`);
+      return key;
+    }
 
     return message.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (placeholder, name) => (
       Object.hasOwn(parameters, name) ? String(parameters[name]) : placeholder
