@@ -11,6 +11,7 @@
     "test:converter": "node --test tests/epub-converter.test.mjs",
     "test:dictionaries": "node --test tests/custom-dictionaries.test.mjs",
     "test:i18n": "node --test tests/i18n.test.mjs",
+    "test:pwa": "node --test tests/pwa.test.mjs",
     "test:ui-template": "node tests/validate-ui-template.cjs",
     "vendor:update": "node scripts/update-vendor.mjs",
     "vendor:check": "node scripts/update-vendor.mjs --check"

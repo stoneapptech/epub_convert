@@ -62,8 +62,13 @@ if (!appSource.includes("localStorage.setItem(")
     throw new Error("Custom dictionaries must support local persistence and JSON import/export.");
 }
 
-if ((html.match(/@click\.stop\.prevent="toggleTooltip"/g) || []).length < 2) {
-    throw new Error("Summary tooltip clicks must not toggle the settings accordion.");
+const tooltipCount = (html.match(/:data-tooltip=/g) || []).length;
+if (!tooltipCount
+    || (html.match(/data-trigger="hover focus"/g) || []).length !== tooltipCount
+    || (html.match(/@click\.stop\.prevent="toggleTooltip"/g) || []).length !== tooltipCount
+    || (html.match(/@keydown\.enter\.prevent="toggleTooltip"/g) || []).length !== tooltipCount
+    || (html.match(/@keydown\.space\.prevent="toggleTooltip"/g) || []).length !== tooltipCount) {
+    throw new Error("Every tooltip must support isolated mouse, touch, and keyboard activation.");
 }
 
 if (!html.includes("canEditSelection && selectedBooks.length > 1") || !html.includes("class=\"ts-chip is-outlined\"") || !html.includes("removeSelectedFile(index)")) {
@@ -79,6 +84,11 @@ if (autoDownloadSwitch < settingsSummaryStart || autoDownloadSwitch > settingsSu
 
 if (!/const MAX_BATCH_FILES = [1-9]\d*;/.test(appSource) || !appSource.includes("autoDownload: false")) {
     throw new Error("The batch limit or default auto-download state is incorrect.");
+}
+
+if (!appSource.includes("this.failures.push({ filename: failedFile.name, stage })")
+    || appSource.includes("this.failures.push({ filename: failedFile.name, message })")) {
+    throw new Error("Visible batch failures must show only their stage; diagnostics belong in the console.");
 }
 
 if (!appSource.includes("event.preventDefault();") || !appSource.includes('addEventListener("pagehide"')) {
@@ -98,6 +108,12 @@ if (!html.includes("@pointerdown.stop")
     || !html.includes("@mousedown.stop")
     || !html.includes("@click.stop")) {
     throw new Error("Snackbar interaction must not reach the dialog backdrop handler.");
+}
+
+if (!html.includes('id="snackbar-close"')
+    || !html.includes('@pointerup.stop.prevent="hideSnackbar"')
+    || !html.includes('@click.stop.prevent="hideSnackbar"')) {
+    throw new Error("The snackbar close control must handle pointer and keyboard activation directly.");
 }
 
 const loadSavedDictionary = appSource.slice(

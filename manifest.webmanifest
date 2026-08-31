@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "EPUB 簡繁轉換",
+  "short_name": "EPUB 轉換",
+  "description": "在瀏覽器本機進行 EPUB 簡繁與地區用語轉換。",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#272727",
+  "categories": ["books", "utilities"],
+  "icons": [
+    {
+      "src": "static/icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

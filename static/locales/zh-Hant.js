@@ -1,4 +1,5 @@
 export default Object.freeze({
+  "app.pwa.updateReady": "新版本已準備完成，請重新整理以套用更新。",
   "app.settings.title": "轉換設定",
   "app.direction.label": "轉換方向",
   "app.jieba.label": "斷詞",

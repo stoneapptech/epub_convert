@@ -1,3 +1,4 @@
+import "./pwa.js";
 import { resolveConfig, resolveMode, supportsJieba, supportsWordConversion } from "./modes.js";
 import { t } from "./i18n.js";
 import {
@@ -74,6 +75,7 @@ let savedTheme = null;
 let systemThemeListener = null;
 let beforeUnloadListener = null;
 let pageHideListener = null;
+let pwaUpdateListener = null;
 
 try {
   savedTheme = sessionStorage.getItem(THEME_STORAGE_KEY);
@@ -85,6 +87,8 @@ function applyThemeClass(dark) {
   document.documentElement.classList.toggle("is-dark", dark);
   document.documentElement.classList.toggle("is-light", !dark);
   document.documentElement.dataset.scheme = dark ? "dark" : "light";
+  document.querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", dark ? "#272727" : "#ffffff");
 }
 
 const initialDarkMode = savedTheme ? savedTheme === "dark" : colorScheme.matches;
@@ -294,8 +298,10 @@ createApp({
       event.returnValue = message;
     };
     pageHideListener = () => this.cleanup();
+    pwaUpdateListener = () => this.showSnackbar(t("app.pwa.updateReady"));
     window.addEventListener("beforeunload", beforeUnloadListener);
     window.addEventListener("pagehide", pageHideListener);
+    window.addEventListener("epub-convert:pwa-update-ready", pwaUpdateListener);
     this.loadDictionaryLibrary();
   },
 
@@ -303,6 +309,7 @@ createApp({
     colorScheme.removeEventListener?.("change", systemThemeListener);
     window.removeEventListener("beforeunload", beforeUnloadListener);
     window.removeEventListener("pagehide", pageHideListener);
+    window.removeEventListener("epub-convert:pwa-update-ready", pwaUpdateListener);
     this.cleanup();
   },
 
