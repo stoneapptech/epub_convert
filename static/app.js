@@ -38,6 +38,18 @@ const ProgressPhaseIcon = Object.freeze({
   compressing: "is-file-zipper-icon",
   complete: "is-circle-check-icon",
 });
+const FailurePhaseLocaleKey = Object.freeze({
+  initializing: "app.failureStage.opencc",
+  "initializing-opencc": "app.failureStage.opencc",
+  "initializing-dictionary": "app.failureStage.dictionary",
+  "initializing-custom-dictionary": "app.failureStage.customDictionary",
+  "reading-file": "app.failureStage.fileReading",
+  reading: "app.failureStage.epubReading",
+  converting: "app.failureStage.converting",
+  building: "app.failureStage.building",
+  compressing: "app.failureStage.compressing",
+  complete: "app.failureStage.finishing",
+});
 
 let selectedFiles = [];
 let currentFile = null;
@@ -683,7 +695,7 @@ createApp({
           [bytes],
         );
       } catch (error) {
-        this.failCurrentFile(error.message || t("app.error.readFile"), error);
+        this.failCurrentFile(error.message || t("app.error.readFile"), error, false, "reading-file");
       }
     },
 
@@ -825,9 +837,11 @@ createApp({
       link.remove();
     },
 
-    failCurrentFile(message, error = null, forceWorkerReset = false) {
+    failCurrentFile(message, error = null, forceWorkerReset = false, phase = null) {
       if (!this.isConverting || !currentFile) return;
       const failedFile = currentFile;
+      const failurePhase = phase || error?.phase || activeProgressPhase;
+      const stage = t(FailurePhaseLocaleKey[failurePhase] || "app.failureStage.unknown");
       currentFile = null;
       console.error("[EPUB converter] Conversion failed", {
         error: error || message,
@@ -842,7 +856,7 @@ createApp({
         || error?.cause?.name === "RuntimeError"
         || error?.phase?.startsWith?.("initializing");
       if (mustResetWorker) terminateWorker();
-      this.failures.push({ filename: failedFile.name, message });
+      this.failures.push({ filename: failedFile.name, stage });
       this.showSnackbar(t("app.batch.fileFailed", { filename: failedFile.name }));
       batchIndex += 1;
       this.convertNextFile();
@@ -869,8 +883,7 @@ createApp({
       if (event.data?.type === "progress") this.queueProgress(event.data);
       if (event.data?.type === "complete") this.queueCompletion(event.data);
       if (event.data?.type === "error") {
-        const detail = event.data.error.entryName ? `（${event.data.error.entryName}）` : "";
-        this.failCurrentFile(`${event.data.error.message}${detail}`, event.data.error);
+        this.failCurrentFile(event.data.error.message, event.data.error);
       }
     },
 

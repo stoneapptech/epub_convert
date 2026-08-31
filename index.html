@@ -222,10 +222,12 @@
           </div>
           <div class="symbol"><span class="ts-icon is-book-icon" aria-hidden="true"></span></div>
         </section>
-        <div v-if="failures.length" class="ts-notice is-negative is-outlined has-top-spaced" role="status">
-          <div class="title">{{ t("app.batch.failuresTitle", { count: failures.length }) }}</div>
-          <div class="content">
-            <div v-for="(failure, index) in failures" :key="`${failure.filename}-${index}`">{{ t("app.batch.failureItem", failure) }}</div>
+        <div v-if="failures.length" class="ts-box is-negative is-top-indicated has-top-spaced" role="status">
+          <div class="ts-content">
+            <div class="ts-badge is-negative">{{ t("app.batch.failuresTitle", { count: failures.length }) }}</div>
+            <div class="content failure-list">
+              <div v-for="(failure, index) in failures" :key="`${failure.filename}-${index}`">{{ t("app.batch.failureItem", failure) }}</div>
+            </div>
           </div>
         </div>
       </div>

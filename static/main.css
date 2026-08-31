@@ -80,6 +80,12 @@ footer.ts-content,
   white-space: nowrap;
 }
 
+.failure-list {
+  max-height: 12rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 #settings-details {
   margin-top: 1rem;
 }
