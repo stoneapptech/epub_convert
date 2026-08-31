@@ -4,3 +4,4 @@ __pycache__/
 node_modules/
 # test epub files
 *.epub
+dist/
