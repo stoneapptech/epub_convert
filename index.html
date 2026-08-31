@@ -336,7 +336,14 @@
     >
       <div v-if="snackbarVisible" class="ts-snackbar" id="snackbar">
         <div class="content" id="snackbar-content">{{ snackbarMessage }}</div>
-        <button class="close" id="snackbar-close" type="button" :aria-label="t('app.snackbar.close')" @click="hideSnackbar"></button>
+        <button
+          class="close"
+          id="snackbar-close"
+          type="button"
+          :aria-label="t('app.snackbar.close')"
+          @pointerup.stop.prevent="hideSnackbar"
+          @click.stop.prevent="hideSnackbar"
+        ></button>
       </div>
     </div>
   </div>
