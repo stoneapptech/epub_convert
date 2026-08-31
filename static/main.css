@@ -6,6 +6,10 @@
   display: none !important;
 }
 
+:root {
+  --transition-duration: 0.15s;
+}
+
 html,
 body {
   height: 100%;
@@ -28,22 +32,35 @@ body {
 body,
 #dropzone,
 .ts-blankslate,
+.ts-fieldset,
+.ts-switch input::after,
 footer.ts-content,
+.ts-box,
 #reset-button {
-  transition: background-color 0.25s ease, border-color 0.25s ease;
+  transition: background-color var(--transition-duration) ease, border-color var(--transition-duration) ease;
 }
 
 .ts-progress,
 .ts-progress .bar {
-  transition: background-color 0.25s ease, width 0.1s ease, opacity 0.25s ease;
+  transition: background-color var(--transition-duration) ease, width var(--transition-duration) ease, opacity var(--transition-duration) ease;
 }
 
 .ts-text,
 .ts-header,
 .ts-icon,
 .ts-close,
+.ts-blankslate .header, .ts-blankslate .description,
+.ts-accordion > summary,
+.ts-accordion > summary::before,
 #file-heading {
-  transition: color 0.25s ease;
+  transition: color var(--transition-duration) ease;
+}
+
+.ts-chip,
+.ts-switch,
+.ts-selection, .ts-selection .item, .ts-selection .text,
+.ts-button {
+  transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease, border-color var(--transition-duration) ease;
 }
 
 #main {
