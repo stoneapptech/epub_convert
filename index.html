@@ -65,7 +65,7 @@
             </span>
           </summary>
           <fieldset class="ts-fieldset">
-            <div class="ts-grid is-top-aligned is-stackable mobile:is-stacked">
+            <div class="ts-grid is-middle-aligned is-stackable mobile:is-stacked">
               <div class="column is-4-wide">
                 <div class="ts-text is-label has-bottom-spaced-small" id="conversion-direction-label">{{ t("app.direction.label") }}</div>
                 <div class="ts-selection is-fluid" role="radiogroup" aria-labelledby="conversion-direction-label">
@@ -99,22 +99,17 @@
                 </div>
               </div>
               <div class="column is-4-wide">
-                <div class="ts-text is-label has-bottom-spaced-small" id="word-conversion-label">
-                  {{ t("app.words.header") }} <span class="ts-icon is-circle-question-icon is-start-spaced" :data-tooltip="wordConversionHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true"></span>
-                </div>
                 <label class="ts-switch" tabindex="0">
                   <input type="checkbox" id="word-conversion-switch" v-model="useWordConversion" :disabled="!wordConversionSupported || isConverting" :aria-description="wordConversionHelp">
-                  {{ wordConversionLabel }}
+                  {{ t("app.words.generic") }}
+                  <span class="ts-icon is-circle-question-icon is-start-spaced" :data-tooltip="wordConversionHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true"></span>
                 </label>
-                <template v-if="jiebaSupported">
-                  <div class="ts-text is-label has-top-spaced-small has-bottom-spaced-small" :data-tooltip="jiebaHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true">
-                    {{ t("app.jieba.header") }} <span class="ts-icon is-circle-question-icon is-start-spaced" aria-hidden="true"></span>
-                  </div>
-                  <label class="ts-switch" tabindex="0">
-                    <input type="checkbox" id="jieba-switch" v-model="useJieba" :disabled="isConverting" :aria-description="jiebaHelp">
-                    {{ t("app.jieba.label") }}
-                  </label>
-                </template>
+                <label class="ts-switch has-start-spaced-small" v-if="jiebaSupported" tabindex="0">
+                  <input type="checkbox" id="jieba-switch" v-model="useJieba" :disabled="isConverting" :aria-description="jiebaHelp">
+                  {{ t("app.jieba.label") }}
+                  <span class="ts-icon is-circle-question-icon is-start-spaced" :data-tooltip="jiebaHelp" data-trigger="hover" @click="toggleTooltip" aria-hidden="true"></span>
+                </label>
+              </div>
               </div>
             </div>
           </fieldset>

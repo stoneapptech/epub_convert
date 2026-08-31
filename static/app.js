@@ -206,12 +206,6 @@ createApp({
         ? "app.words.toTaiwanHelp"
         : "app.words.toHongKongHelp");
     },
-    wordConversionLabel() {
-      if (this.convertToSimplified) return t("app.words.toChina");
-      if (this.conversionRegion === "tw") return t("app.words.toTaiwan");
-      if (this.conversionRegion === "hk") return t("app.words.toHongKong");
-      return t("app.words.generic");
-    },
     jiebaSupported() {
       return supportsJieba(this.mode);
     },
