@@ -208,6 +208,9 @@
               <a v-for="download in downloads" :key="download.url" class="ts-button is-secondary is-outlined is-start-icon" :href="download.url" :download="download.filename">
                 <span class="ts-icon is-download-icon" aria-hidden="true"></span> {{ download.filename }}
               </a>
+              <button v-if="showDownloadAll" class="ts-button is-start-icon" id="download-all-button" type="button" @click="downloadAllSuccessful">
+                <span class="ts-icon is-download-icon" aria-hidden="true"></span> {{ t("app.action.downloadAll", { count: downloads.length }) }}
+              </button>
             </div>
             <div v-if="isConverting" class="action" id="progress-area">
               <div class="ts-progress has-top-spaced" :class="[progressClass, { 'is-fast': fastMode }]" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progressPercent">

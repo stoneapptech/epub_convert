@@ -31,6 +31,13 @@ if (!html.includes('id="auto-download-switch"')) {
     throw new Error("The auto-download switch is missing.");
 }
 
+if (!html.includes('id="download-all-button"')
+    || !html.includes('v-if="showDownloadAll"')
+    || !html.includes('@click="downloadAllSuccessful"')
+    || !appSource.includes("for (const download of this.downloads) this.triggerDownload(download)")) {
+    throw new Error("Completed multi-file batches must offer downloading all successful EPUBs.");
+}
+
 if (!html.includes('id="fast-mode-switch"') || !html.includes('<span v-if="fastMode">{{ progressLabel }}</span>')) {
     throw new Error("Fast mode must render progress labels without Vue transitions.");
 }

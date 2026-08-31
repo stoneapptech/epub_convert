@@ -200,6 +200,9 @@ createApp({
     isConverting() {
       return this.state === ConversionState.CONVERTING;
     },
+    showDownloadAll() {
+      return !this.isConverting && this.selectedBooks.length > 1 && this.downloads.length > 0;
+    },
     canEditSelection() {
       return this.hasFile && (
         this.state === ConversionState.SELECTED ||
@@ -842,6 +845,10 @@ createApp({
       document.body.append(link);
       link.click();
       link.remove();
+    },
+
+    downloadAllSuccessful() {
+      for (const download of this.downloads) this.triggerDownload(download);
     },
 
     failCurrentFile(message, error = null, forceWorkerReset = false, phase = null) {

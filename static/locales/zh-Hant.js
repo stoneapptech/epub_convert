@@ -4,6 +4,7 @@ export default Object.freeze({
   "app.direction.label": "轉換方向",
   "app.jieba.label": "斷詞",
   "app.action.convert": "開始轉換",
+  "app.action.downloadAll": "下載成功檔案（{count}）",
   "app.snackbar.close": "關閉通知",
   "app.progress.percent": "{percent}%",
   "app.batch.failureItem": "{filename}：在{stage}時發生錯誤",
