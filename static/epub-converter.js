@@ -1,12 +1,17 @@
 import { outputLanguage } from "./opencc-config.js";
-import {
+
+const IS_NODE = typeof process !== "undefined" && Boolean(process.versions?.node);
+const zip = IS_NODE
+  ? await import("@zip.js/zip.js")
+  : await import("../vendor/zip.js/zip-core-external.min.js");
+const {
   TextReader,
   Uint8ArrayReader,
   Uint8ArrayWriter,
   ZipReader,
   ZipWriter,
   configure,
-} from "../vendor/zip.js/zip-core-external.min.js";
+} = zip;
 
 const EPUB_MIMETYPE = "application/epub+zip";
 const CONVERTIBLE_EXTENSIONS = new Set(["htm", "html", "xhtml", "ncx", "opf"]);
@@ -19,13 +24,16 @@ export function isAcceptedEpubMimetype(value) {
     && value.trim().toLowerCase() === EPUB_MIMETYPE;
 }
 
-configure({
+const zipConfiguration = {
   useWebWorkers: false,
   useCompressionStream: false,
-  workerURI: new URL("../vendor/zip.js/zip-web-worker.js", import.meta.url).href,
-  wasmURI: new URL("../vendor/zip.js/zip-module.wasm", import.meta.url).href,
   maxWorkers: 1,
-});
+};
+if (!IS_NODE) {
+  zipConfiguration.workerURI = new URL("../vendor/zip.js/zip-web-worker.js", import.meta.url).href;
+  zipConfiguration.wasmURI = new URL("../vendor/zip.js/zip-module.wasm", import.meta.url).href;
+}
+configure(zipConfiguration);
 
 export class EpubConversionError extends Error {
   constructor(code, messageKey, entryName = null, cause = null, diagnostics = null, messageParameters = {}) {

@@ -98,7 +98,8 @@ async function validatePackages() {
     const projectPackage = await loadJson(path.join(repositoryRoot, "package.json"));
 
     for (const packageDefinition of packages) {
-        const expectedVersion = projectPackage.devDependencies?.[packageDefinition.name];
+        const expectedVersion = projectPackage.dependencies?.[packageDefinition.name]
+            || projectPackage.devDependencies?.[packageDefinition.name];
         const packageRoot = path.join(repositoryRoot, packageDefinition.directory);
         const packageManifest = path.join(packageRoot, "package.json");
 

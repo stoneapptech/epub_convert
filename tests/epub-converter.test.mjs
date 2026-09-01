@@ -71,6 +71,7 @@ test("conversion workers and shared runtime do not depend on UI translations", (
         "static/convert-worker.js",
         "static/conversion-runtime.js",
         "static/epub-converter.js",
+        "scripts/node-convert-worker.mjs",
     ]) {
         const source = readFileSync(filename, "utf8");
         assert.doesNotMatch(source, /i18n\.js/u, filename);
