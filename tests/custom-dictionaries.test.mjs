@@ -8,6 +8,7 @@ import {
   parseDictionaryLibrary,
   serializeDictionaryLibrary,
 } from "../static/custom-dictionaries.js";
+import { getConverter } from "../static/conversion-runtime.js";
 
 test("custom dictionaries use space-separated entries", () => {
   assert.deepEqual(parseCustomDictionary("电脑 電腦\n软件 軟體\n"), [
@@ -34,12 +35,13 @@ test("dictionary libraries round-trip and imports preserve name conflicts", () =
   ]);
 });
 
-test("custom dictionary entries compose after the configured OpenCC converter", async () => {
-  const { default: OpenCC } = await import("../vendor/opencc-wasm/esm/index.js");
-  const baseConverter = OpenCC.Converter({ config: "s2t" });
-  const customConverter = OpenCC.CustomConverter([["電腦", "計算機"]]);
+test("custom dictionary source entries match text before OpenCC conversion", async () => {
+  const converter = await getConverter("s2tw", {
+    id: "pre-opencc-test",
+    entries: [["文学少女", "這很文學少女"]],
+  });
 
-  assert.equal(customConverter(await baseConverter("电脑")), "計算機");
+  assert.equal(await converter("文学少女"), "這很文學少女");
 });
 
 test("saved dictionary records cannot be empty", () => {

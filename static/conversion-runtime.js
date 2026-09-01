@@ -38,7 +38,7 @@ export async function getConverter(config, customDictionary, onProgress = () => 
     });
     const customConverter = OpenCC.CustomConverter(customDictionary.entries);
     if (customConverters.size >= 20) customConverters.clear();
-    customConverters.set(key, async (text) => customConverter(await baseConverter(text)));
+    customConverters.set(key, async (text) => baseConverter(await customConverter(text)));
   }
   return customConverters.get(key);
 }
