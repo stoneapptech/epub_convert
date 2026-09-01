@@ -47,6 +47,7 @@ test("service worker precaches local conversion runtimes", () => {
     assert.ok(existsSync(asset.slice(2)), asset);
   }
   assert.ok(assets.includes("./static/convert-worker.js"));
+  assert.ok(assets.includes("./static/opencc-config.js"));
   assert.ok(assets.includes("./vendor/opencc-wasm/esm/opencc-wasm.wasm"));
   assert.ok(assets.includes("./vendor/zip.js/zip-module.wasm"));
 

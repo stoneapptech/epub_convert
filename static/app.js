@@ -715,7 +715,9 @@ createApp({
       if (this.progressDeterminate) {
         this.progressPercent = Math.max(0, Math.min(100, progress.percent));
       }
-      this.progressLabel = progress.label || t("app.progress.converting");
+      this.progressLabel = progress.messageKey
+        ? t(progress.messageKey, progress.messageParameters)
+        : progress.label || t("app.progress.converting");
       this.fileIcon = ProgressPhaseIcon[progress.phase] || "is-gears-icon";
     },
 
@@ -897,7 +899,11 @@ createApp({
       if (event.data?.type === "progress") this.queueProgress(event.data);
       if (event.data?.type === "complete") this.queueCompletion(event.data);
       if (event.data?.type === "error") {
-        this.failCurrentFile(event.data.error.message, event.data.error);
+        const error = event.data.error;
+        const message = error.messageKey
+          ? t(error.messageKey, error.messageParameters)
+          : t("worker.error.failed");
+        this.failCurrentFile(message, error);
       }
     },
 

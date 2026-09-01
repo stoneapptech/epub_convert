@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "epub-convert";
-const CACHE_VERSION = "v18";
+const CACHE_VERSION = "v19";
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${CACHE_VERSION}`;
 
@@ -13,8 +13,10 @@ const APP_SHELL = [
   "./static/i18n.js",
   "./static/locales/zh-Hant.js",
   "./static/modes.js",
+  "./static/opencc-config.js",
   "./static/custom-dictionaries.js",
   "./static/convert-worker.js",
+  "./static/conversion-runtime.js",
   "./static/epub-converter.js",
   "./static/icons/app-icon.svg",
   "./vendor/vue/vue.global.prod.js",

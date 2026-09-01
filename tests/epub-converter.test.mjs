@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import OpenCC from "opencc-wasm";
 
@@ -52,6 +53,8 @@ test("OpenCC failures include the EPUB entry and chunk diagnostics", async () =>
             (error) => {
                 assert.ok(error instanceof EpubConversionError);
                 assert.equal(error.code, "opencc-conversion");
+                assert.equal(error.messageKey, "epub.error.openCC");
+                assert.deepEqual(error.messageParameters, { entryName: "OEBPS/large.xhtml" });
                 assert.equal(error.entryName, "OEBPS/large.xhtml");
                 assert.ok(error.diagnostics.chunkCount > 1);
                 assert.ok(error.diagnostics.chunkBytes <= 16 * 1024);
@@ -60,6 +63,18 @@ test("OpenCC failures include the EPUB entry and chunk diagnostics", async () =>
         );
     } finally {
         console.error = originalConsoleError;
+    }
+});
+
+test("conversion workers and shared runtime do not depend on UI translations", () => {
+    for (const filename of [
+        "static/convert-worker.js",
+        "static/conversion-runtime.js",
+        "static/epub-converter.js",
+    ]) {
+        const source = readFileSync(filename, "utf8");
+        assert.doesNotMatch(source, /i18n\.js/u, filename);
+        assert.doesNotMatch(source, /\bt\s*\(/u, filename);
     }
 });
 

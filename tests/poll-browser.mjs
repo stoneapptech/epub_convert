@@ -31,7 +31,7 @@ socket.addEventListener("message", (event) => {
     if (!message.id || !pending.has(message.id)) return;
     const { resolve, reject } = pending.get(message.id);
     pending.delete(message.id);
-    if (message.error) reject(new Error(message.error.message));
+    if (message.error) reject(new Error(message.error.messageKey || message.error.message));
     else resolve(message.result);
 });
 
