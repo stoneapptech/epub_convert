@@ -1,4 +1,7 @@
+#!/usr/bin/env node
+
 import * as os from "node:os";
+import { realpathSync } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,7 +19,7 @@ import { CliProgress } from "./cli-progress.mjs";
 const workerUrl = new URL("./node-convert-worker.mjs", import.meta.url);
 const MAX_JOBS = 64;
 
-export const HELP = `Usage: npm run convert -- [options] <file-or-directory...>
+export const HELP = `Usage: epub-convert [options] <file-or-directory...>
 
 Convert EPUB files with OpenCC and process multiple books in parallel.
 
@@ -321,8 +324,14 @@ async function main() {
   if (failed) process.exitCode = 1;
 }
 
-const isCommandLine = process.argv[1]
-  && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const isCommandLine = (() => {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
 if (isCommandLine) {
   main().catch((error) => {
     console.error(`Fatal error: ${error.stack || error.message}`);

@@ -27,6 +27,16 @@ import { CliProgress } from "../scripts/cli-progress.mjs";
 
 configure({ useWebWorkers: false, useCompressionStream: false });
 
+test("package exposes the CLI as an npx executable", () => {
+  const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+  const executable = readFileSync("scripts/convert.mjs", "utf8");
+
+  assert.equal(packageJson.private, undefined);
+  assert.equal(packageJson.bin?.["epub-convert"], "scripts/convert.mjs");
+  assert.match(HELP, /^Usage: epub-convert /);
+  assert.match(executable, /^#!\/usr\/bin\/env node\r?\n/);
+});
+
 async function createFixture(title) {
   const writer = new ZipWriter(new Uint8ArrayWriter(), {
     useWebWorkers: false,

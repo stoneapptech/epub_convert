@@ -1,9 +1,27 @@
 {
   "name": "epub-convert",
-  "private": true,
   "version": "1.0.0",
-  "description": "Converting EPUB files between Traditional and Simplified Chinese, locally in the browser.",
+  "description": "Convert EPUB files between Traditional and Simplified Chinese with OpenCC WASM.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stoneapptech/epub_convert.git"
+  },
+  "homepage": "https://app.stoneapp.tech/#epubconvert",
+  "bugs": "https://github.com/stoneapptech/epub_convert/issues",
   "type": "module",
+  "bin": {
+    "epub-convert": "scripts/convert.mjs"
+  },
+  "files": [
+    "scripts/cli-progress.mjs",
+    "scripts/convert.mjs",
+    "scripts/node-convert-worker.mjs",
+    "static/conversion-runtime.js",
+    "static/custom-dictionaries.js",
+    "static/epub-converter.js",
+    "static/opencc-config.js"
+  ],
   "engines": {
     "node": ">=18"
   },

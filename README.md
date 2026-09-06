@@ -30,7 +30,8 @@ python -m http.server 8000
 ### Command-Line
 需要 Node.js 18 或更新版本。
 
-此 command line 版本使用與 Web 版相同的 OpenCC WASM 轉換引擎。可以透過 `npm run convert` 來使用此工具，需要先安裝 npm 套件:
+此 command line 版本使用與 Web 版相同的 OpenCC WASM 轉換引擎。可以直接透過 `npx epub-convert` 來使用此工具。  
+或是下載此專案後透過 `npm run convert`執行，需要先安裝 npm 套件:
 
 ```
 npm ci
