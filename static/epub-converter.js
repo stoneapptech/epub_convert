@@ -1,17 +1,12 @@
 import { outputLanguage } from "./opencc-config.js";
 
 const IS_NODE = typeof process !== "undefined" && Boolean(process.versions?.node);
-const zip = IS_NODE
-  ? await import("@zip.js/zip.js")
-  : await import("../vendor/zip.js/zip-core-external.min.js");
-const {
-  TextReader,
-  Uint8ArrayReader,
-  Uint8ArrayWriter,
-  ZipReader,
-  ZipWriter,
-  configure,
-} = zip;
+let TextReader;
+let Uint8ArrayReader;
+let Uint8ArrayWriter;
+let ZipReader;
+let ZipWriter;
+let zipPromise = null;
 
 const EPUB_MIMETYPE = "application/epub+zip";
 const CONVERTIBLE_EXTENSIONS = new Set(["htm", "html", "xhtml", "ncx", "opf"]);
@@ -24,16 +19,27 @@ export function isAcceptedEpubMimetype(value) {
     && value.trim().toLowerCase() === EPUB_MIMETYPE;
 }
 
-const zipConfiguration = {
-  useWebWorkers: false,
-  useCompressionStream: false,
-  maxWorkers: 1,
-};
-if (!IS_NODE) {
-  zipConfiguration.workerURI = new URL("../vendor/zip.js/zip-web-worker.js", import.meta.url).href;
-  zipConfiguration.wasmURI = new URL("../vendor/zip.js/zip-module.wasm", import.meta.url).href;
+async function loadZip() {
+  if (!zipPromise) {
+    zipPromise = (IS_NODE
+      ? import("@zip.js/zip.js")
+      : import("../vendor/zip.js/zip-core-external.min.js")
+    ).then((zip) => {
+      ({ TextReader, Uint8ArrayReader, Uint8ArrayWriter, ZipReader, ZipWriter } = zip);
+      const configuration = {
+        useWebWorkers: false,
+        useCompressionStream: false,
+        maxWorkers: 1,
+      };
+      if (!IS_NODE) {
+        configuration.workerURI = new URL("../vendor/zip.js/zip-web-worker.js", import.meta.url).href;
+        configuration.wasmURI = new URL("../vendor/zip.js/zip-module.wasm", import.meta.url).href;
+      }
+      zip.configure(configuration);
+    });
+  }
+  return zipPromise;
 }
-configure(zipConfiguration);
 
 export class EpubConversionError extends Error {
   constructor(code, messageKey, entryName = null, cause = null, diagnostics = null, messageParameters = {}) {
@@ -222,6 +228,7 @@ async function readEntryBytes(entry) {
 }
 
 export async function convertEpub({ bytes, filename, config, converter, onProgress }) {
+  await loadZip();
   if (!(bytes instanceof ArrayBuffer || bytes instanceof Uint8Array)) {
     const error = new TypeError("epub.error.invalidBytes");
     error.code = "invalid-bytes";

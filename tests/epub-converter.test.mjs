@@ -79,6 +79,19 @@ test("conversion workers and shared runtime do not depend on UI translations", (
     }
 });
 
+test("browser worker installs its message listener before loading conversion modules", () => {
+    const worker = readFileSync("static/convert-worker.js", "utf8");
+    const runtime = readFileSync("static/conversion-runtime.js", "utf8");
+    const converter = readFileSync("static/epub-converter.js", "utf8");
+
+    assert.doesNotMatch(worker, /^import\s/u);
+    assert.match(worker, /import\("\.\/epub-converter\.js"\)/u);
+    assert.match(worker, /import\("\.\/conversion-runtime\.js"\)/u);
+    assert.doesNotMatch(runtime, /import\(["']opencc-wasm["']\)/u);
+    assert.doesNotMatch(converter, /^const zip = .*await import/mu);
+    assert.match(converter, /async function loadZip\(\)/u);
+});
+
 test("large input completes with the pinned OpenCC WASM converter", async () => {
     const converter = OpenCC.Converter({ config: "s2t" });
     const input = "简体中文软件转换。".repeat(12_000);

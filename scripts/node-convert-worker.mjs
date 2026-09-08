@@ -55,7 +55,12 @@ parentPort.on("message", async (message) => {
         messageParameters: progress.messageParameters,
       });
     };
-    const converter = await getConverter(workerData.config, workerData.customDictionary, onProgress);
+    const converter = await getConverter(
+      workerData.config,
+      workerData.customDictionary,
+      () => import("opencc-wasm"),
+      onProgress,
+    );
     const bytes = await readFile(inputPath);
     const result = await convertEpub({
       bytes,

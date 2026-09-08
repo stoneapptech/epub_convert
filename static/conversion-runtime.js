@@ -1,9 +1,16 @@
-const IS_NODE = typeof process !== "undefined" && Boolean(process.versions?.node);
 const baseConverters = new Map();
 const customConverters = new Map();
 let openCcModulePromise = null;
 
-export async function getConverter(config, customDictionary, onProgress = () => {}) {
+export async function getConverter(
+  config,
+  customDictionary,
+  loadOpenCc,
+  onProgress = () => {},
+) {
+  if (typeof loadOpenCc !== "function") {
+    throw new TypeError("An OpenCC module loader is required.");
+  }
   if (!openCcModulePromise) {
     onProgress({
       phase: "initializing-opencc",
@@ -11,9 +18,7 @@ export async function getConverter(config, customDictionary, onProgress = () => 
       messageKey: "worker.progress.loadingOpenCC",
       messageParameters: {},
     });
-    openCcModulePromise = IS_NODE
-      ? import("opencc-wasm")
-      : import("../vendor/opencc-wasm/esm/index.js");
+    openCcModulePromise = loadOpenCc();
   }
   const { default: OpenCC } = await openCcModulePromise;
 

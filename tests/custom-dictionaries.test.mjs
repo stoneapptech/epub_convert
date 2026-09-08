@@ -39,9 +39,16 @@ test("custom dictionary source entries match text before OpenCC conversion", asy
   const converter = await getConverter("s2tw", {
     id: "pre-opencc-test",
     entries: [["文学少女", "這很文學少女"]],
-  });
+  }, () => import("opencc-wasm"));
 
   assert.equal(await converter("文学少女"), "這很文學少女");
+});
+
+test("conversion runtime requires an explicit OpenCC module loader", async () => {
+  await assert.rejects(
+    getConverter("s2t", null),
+    /OpenCC module loader is required/u,
+  );
 });
 
 test("saved dictionary records cannot be empty", () => {

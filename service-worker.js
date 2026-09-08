@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "epub-convert";
-const CACHE_VERSION = "v22";
+const CACHE_VERSION = "v23";
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${CACHE_VERSION}`;
 

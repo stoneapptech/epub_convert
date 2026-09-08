@@ -33,6 +33,8 @@ test("package exposes the CLI as an npx executable", () => {
 
   assert.equal(packageJson.private, undefined);
   assert.equal(packageJson.bin?.["epub-convert"], "scripts/convert.mjs");
+  assert.ok(packageJson.dependencies?.["@zip.js/zip.js"]);
+  assert.ok(!packageJson.files.some((filename) => filename.startsWith("vendor/zip.js/")));
   assert.match(HELP, /^Usage: epub-convert /);
   assert.match(executable, /^#!\/usr\/bin\/env node\r?\n/);
 });
