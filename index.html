@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-Hant" data-scheme="light">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>EPUB 簡繁轉換</title>
+  <meta name="description" content="EPUB 的簡繁轉換線上工具。支援檔案拖放，且選擇檔案後即刻開始轉換。另外，一切都在瀏覽器中直接進行，數秒內即可完成轉換。">
+  <meta name="keywords" content="epub,EPUB,chinese,ebook,電子書,簡體,繁體,簡繁轉換,簡轉繁,簡體轉繁體,線上工具,線上轉換,繁體中文,簡體中文,繁簡轉換,繁轉簡,繁體轉簡體,OpenCC">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="static/icons/app-icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;display=swap">
+  <link rel="stylesheet" href="vendor/tocas/tocas.min.css">
+  <link rel="stylesheet" href="static/main.css">
+  <script src="vendor/tocas/tocas.min.js"></script>
+  <script src="vendor/vue/vue.global.prod.js"></script>
+  <script type="module" src="static/app.js"></script>
+</head>
+
+<body>
+  <div id="app" v-cloak>
+    <header class="ts-header is-center-aligned is-huge">
+      <div class="ts-content is-padded">EPUB 簡繁轉換</div>
+    </header>
+
+    <main class="ts-app-center has-vertically-padded" id="main">
+      <div class="ts-container">
+
+        <details class="ts-accordion has-bottom-spaced" id="settings-details">
+          <summary>
+            <span class="ts-icon is-gears-icon is-end-spaced" aria-hidden="true"></span> {{ t("app.settings.title") }}
+            <span v-for="setting in settingsSummary" :key="setting" class="ts-chip is-small is-start-spaced">{{ setting }}</span>
+            <span class="ts-wrap is-compact is-middle-aligned summary-switches" @click.stop @keydown.stop>
+            <span class="ts-wrap is-compact is-middle-aligned fast-mode-summary">
+              <label class="ts-switch" tabindex="0">
+                <input type="checkbox" id="fast-mode-switch" v-model="fastMode" :disabled="isConverting" :aria-description="t('app.fastMode.help')">
+                {{ t("app.fastMode.label") }}
+              </label>
+              <span
+                class="ts-icon is-circle-question-icon"
+                tabindex="0"
+                role="button"
+                :aria-label="t('app.fastMode.help')"
+                :data-tooltip="t('app.fastMode.help')"
+                data-trigger="hover focus"
+                @click.stop.prevent="toggleTooltip"
+                @keydown.enter.prevent="toggleTooltip"
+                @keydown.space.prevent="toggleTooltip"
+              ></span>
+            </span>
+            <span class="ts-wrap is-compact is-middle-aligned auto-download-summary">
+              <label class="ts-switch" tabindex="0">
+                <input type="checkbox" id="auto-download-switch" v-model="autoDownload" :disabled="isConverting" :aria-description="t('app.autoDownload.help')">
+                {{ t("app.autoDownload.label") }}
+              </label>
+              <span
+                class="ts-icon is-circle-question-icon"
+                tabindex="0"
+                role="button"
+                :aria-label="t('app.autoDownload.help')"
+                :data-tooltip="t('app.autoDownload.help')"
+                data-trigger="hover focus"
+                @click.stop.prevent="toggleTooltip"
+                @keydown.enter.prevent="toggleTooltip"
+                @keydown.space.prevent="toggleTooltip"
+              ></span>
+            </span>
+            </span>
+          </summary>
+          <fieldset class="ts-fieldset">
+            <div class="ts-grid is-middle-aligned is-stackable mobile:is-stacked">
+              <div class="column is-4-wide">
+                <div class="ts-text is-label has-bottom-spaced-small" id="conversion-direction-label">{{ t("app.direction.label") }}</div>
+                <div class="ts-selection is-fluid" role="radiogroup" aria-labelledby="conversion-direction-label">
+                  <label class="item">
+                    <input type="radio" name="conversion-direction" :value="false" v-model="convertToSimplified" :disabled="isConverting">
+                    <span class="text">{{ t("app.summary.s2t") }}</span>
+                  </label>
+                  <label class="item">
+                    <input type="radio" name="conversion-direction" :value="true" v-model="convertToSimplified" :disabled="isConverting">
+                    <span class="text">{{ t("app.summary.t2s") }}</span>
+                  </label>
+                </div>
+              </div>
+              <div class="column is-8-wide">
+                <div class="ts-text is-label has-bottom-spaced-small" id="conversion-region-label">
+                  {{ conversionRegionLabel }}
+                  <span
+                    class="ts-icon is-circle-question-icon is-start-spaced"
+                    tabindex="0"
+                    role="button"
+                    :aria-label="conversionRegionHelp"
+                    :data-tooltip="conversionRegionHelp"
+                    data-trigger="hover focus"
+                    @click.stop.prevent="toggleTooltip"
+                    @keydown.enter.prevent="toggleTooltip"
+                    @keydown.space.prevent="toggleTooltip"
+                  ></span>
+                </div>
+                <div class="ts-selection is-fluid" role="radiogroup" aria-labelledby="conversion-region-label" :aria-description="conversionRegionHelp">
+                  <label class="item">
+                    <input type="radio" name="conversion-region" value="standard" v-model="conversionRegion" :disabled="isConverting">
+                    <span class="text"><span class="ts-icon is-globe-icon is-end-spaced" aria-hidden="true"></span>{{ t("app.summary.region.standard") }}</span>
+                  </label>
+                  <label class="item">
+                    <input type="radio" name="conversion-region" value="tw" v-model="conversionRegion" :disabled="isConverting">
+                    <span class="text"><span class="ts-flag is-taiwan-flag is-end-spaced" aria-hidden="true"></span>{{ t("app.summary.region.tw") }}</span>
+                  </label>
+                  <label class="item">
+                    <input type="radio" name="conversion-region" value="hk" v-model="conversionRegion" :disabled="isConverting">
+                    <span class="text"><span class="ts-flag is-hong-kong-flag is-end-spaced" aria-hidden="true"></span>{{ t("app.summary.region.hk") }}</span>
+                  </label>
+                </div>
+              </div>
+              <div class="column is-4-wide">
+                <span class="ts-wrap is-compact is-middle-aligned">
+                  <label class="ts-switch" tabindex="0">
+                    <input type="checkbox" id="word-conversion-switch" v-model="useWordConversion" :disabled="!wordConversionSupported || isConverting" :aria-description="wordConversionHelp">
+                    {{ t("app.words.generic") }}
+                  </label>
+                  <span
+                    class="ts-icon is-circle-question-icon"
+                    tabindex="0"
+                    role="button"
+                    :aria-label="wordConversionHelp"
+                    :data-tooltip="wordConversionHelp"
+                    data-trigger="hover focus"
+                    @click.stop.prevent="toggleTooltip"
+                    @keydown.enter.prevent="toggleTooltip"
+                    @keydown.space.prevent="toggleTooltip"
+                  ></span>
+
+                  <template v-if="jiebaSupported">
+                    <label class="ts-switch has-start-spaced-small" tabindex="0">
+                      <input type="checkbox" id="jieba-switch" v-model="useJieba" :disabled="isConverting" :aria-description="jiebaHelp">
+                      {{ t("app.jieba.label") }}
+                    </label>
+                    <span
+                      class="ts-icon is-circle-question-icon"
+                      tabindex="0"
+                      role="button"
+                      :aria-label="jiebaHelp"
+                      :data-tooltip="jiebaHelp"
+                      data-trigger="hover focus"
+                      @click.stop.prevent="toggleTooltip"
+                      @keydown.enter.prevent="toggleTooltip"
+                      @keydown.space.prevent="toggleTooltip"
+                    ></span>
+                  </template>
+                </span>
+              </div>
+              <div class="column is-8-wide">
+                <div class="ts-text is-label has-bottom-spaced-small" id="custom-dictionary-label">
+                  {{ t("app.dictionary.title") }}
+                  <span
+                    class="ts-icon is-circle-question-icon is-start-spaced"
+                    tabindex="0"
+                    role="button"
+                    :aria-label="t('app.dictionary.help')"
+                    :data-tooltip="t('app.dictionary.help')"
+                    data-trigger="hover focus"
+                    @click.stop.prevent="toggleTooltip"
+                    @keydown.enter.prevent="toggleTooltip"
+                    @keydown.space.prevent="toggleTooltip"
+                  ></span>
+                </div>
+                <button class="ts-button is-secondary is-outlined is-start-icon" type="button" :disabled="isConverting" @click="openCustomDictionaryDialog">
+                  <span class="ts-icon is-book-atlas-icon" aria-hidden="true"></span>
+                  {{ t("app.dictionary.manage") }}
+                </button>
+                <span class="ts-text is-description has-start-spaced-small" aria-live="polite">{{ customDictionaryStatus }}</span>
+              </div>
+            </div>
+          </fieldset>
+        </details>
+
+        <section
+          class="ts-box is-hollowed"
+          id="dropzone"
+          :class="{ 'is-dragover': isDragover }"
+          :data-state="state"
+          aria-labelledby="file-heading"
+          @dragenter.prevent="onDragEnter"
+          @dragover.prevent
+          @dragleave.prevent="onDragLeave"
+          @drop.prevent="onDrop"
+        >
+          <input ref="fileInput" type="file" id="epub-file" accept=".epub,application/epub+zip" aria-describedby="file-description" multiple hidden @change="onFileChange">
+          <button v-if="hasFile" class="ts-close" id="reset-button" type="button" :aria-label="closeButtonLabel" @click="closeFilePanel"></button>
+          <div class="ts-blankslate is-large" :class="{ 'is-interactive': !isConverting }" id="file-panel" @click="openFilePicker">
+            <span :class="['ts-icon', fileIcon]" id="file-icon" aria-hidden="true"></span>
+            <div class="header" id="file-heading">{{ fileHeading }}</div>
+            <div class="description" id="file-description">{{ fileDescription }}</div>
+            <div v-if="canEditSelection && selectedBooks.length > 1" class="ts-wrap is-compact is-center-aligned selected-books" :aria-label="t('app.file.selectedBooks')" @click.stop>
+              <span v-for="(book, index) in selectedBooks" :key="book.id" class="ts-chip is-outlined">
+                <span class="selected-book-name" :title="book.name">{{ book.name }}</span>
+                <button class="ts-close is-small" type="button" :aria-label="t('app.file.remove', { filename: book.name })" @click.stop="removeSelectedFile(index)"></button>
+              </span>
+            </div>
+            <div v-if="hasFile && !isConverting" class="action ts-wrap is-center-aligned">
+              <button v-if="!downloads.length" class="ts-button is-start-icon" id="convert-button" type="button" @click="startConversion">
+                <span class="ts-icon is-wand-magic-sparkles-icon" aria-hidden="true"></span> {{ t("app.action.convert") }}
+              </button>
+              <a v-for="download in downloads" :key="download.url" class="ts-button is-secondary is-outlined is-start-icon" :href="download.url" :download="download.filename">
+                <span class="ts-icon is-download-icon" aria-hidden="true"></span> {{ download.filename }}
+              </a>
+              <button v-if="showDownloadAll" class="ts-button is-start-icon" id="download-all-button" type="button" @click="downloadAllSuccessful">
+                <span class="ts-icon is-download-icon" aria-hidden="true"></span> {{ t("app.action.downloadAll", { count: downloads.length }) }}
+              </button>
+            </div>
+            <div v-if="isConverting" class="action" id="progress-area">
+              <div class="ts-progress has-top-spaced" :class="[progressClass, { 'is-fast': fastMode }]" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progressPercent">
+                <div class="bar" :style="{ '--value': progressPercent }">
+                  <div class="text" id="progress-value">{{ t("app.progress.percent", { percent: progressPercent }) }}</div>
+                </div>
+              </div>
+              <div class="ts-text is-secondary has-top-spaced-small" id="progress-label" aria-live="polite">
+                <span v-if="fastMode">{{ progressLabel }}</span>
+                <Transition v-else name="progress-filename" mode="out-in">
+                  <span :key="progressLabel">{{ progressLabel }}</span>
+                </Transition>
+              </div>
+            </div>
+          </div>
+          <div class="symbol"><span class="ts-icon is-book-icon" aria-hidden="true"></span></div>
+        </section>
+        <div v-if="failures.length" class="ts-box is-negative is-top-indicated has-top-spaced" role="status">
+          <div class="ts-content">
+            <div class="ts-badge is-negative">{{ t("app.batch.failuresTitle", { count: failures.length }) }}</div>
+            <div class="content failure-list">
+              <div v-for="(failure, index) in failures" :key="`${failure.filename}-${index}`">{{ t("app.batch.failureItem", failure) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <dialog ref="customDictionaryDialog" class="ts-modal is-large" id="custom-dictionary-dialog">
+      <div class="content">
+        <div class="ts-content is-padded">
+          <div class="ts-grid is-middle-aligned">
+            <div class="column is-fluid">
+              <div class="ts-header is-large is-heavy">{{ t("app.dictionary.dialogTitle") }}</div>
+            </div>
+            <div class="column">
+              <button class="ts-close is-end-aligned" type="button" :aria-label="t('app.dictionary.action.close')" @click="closeCustomDictionaryDialog"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ts-divider"></div>
+
+        <div class="ts-content is-padded">
+          <label class="ts-switch">
+            <input type="checkbox" id="custom-dictionary-enabled" v-model="dictionaryDraftEnabled">
+            {{ t("app.dictionary.enabled") }}
+          </label>
+
+          <div class="ts-grid is-bottom-aligned has-vertically-spaced-small">
+            <div class="column is-fluid">
+              <label class="ts-text is-label has-bottom-spaced-small" for="saved-dictionary-select">{{ t("app.dictionary.savedLabel") }}</label>
+              <div class="ts-select is-fluid">
+                <select id="saved-dictionary-select" v-model="selectedSavedDictionary" @change="loadSavedDictionary">
+                  <option value="">{{ t("app.dictionary.chooseSaved") }}</option>
+                  <option v-for="dictionary in savedDictionaries" :key="dictionary.name" :value="dictionary.name">{{ dictionary.name }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="column ts-wrap">
+              <button class="ts-button is-negative is-outlined" type="button" :disabled="!selectedSavedDictionary" @click="deleteSavedDictionary">{{ t("app.dictionary.action.delete") }}</button>
+            </div>
+          </div>
+
+          <div class="ts-grid is-bottom-aligned has-vertically-spaced-small">
+            <div class="column is-fluid">
+              <label class="ts-text is-label" for="custom-dictionary-name">{{ t("app.dictionary.nameLabel") }}</label>
+              <div class="ts-input is-fluid">
+                <input id="custom-dictionary-name" type="text" maxlength="100" v-model="dictionaryDraftName" :placeholder="t('app.dictionary.namePlaceholder')">
+              </div>
+            </div>
+            <div class="column">
+              <button class="ts-button is-secondary" type="button" :disabled="!dictionaryChanged" @click="saveCustomDictionary">{{ t("app.dictionary.action.save") }}</button>
+            </div>
+          </div>
+
+          <label class="ts-text is-label has-top-spaced has-bottom-spaced-small" for="custom-dictionary-entries">{{ t("app.dictionary.entriesLabel") }}</label>
+          <div class="ts-notice is-outlined has-bottom-spaced-small" role="note">
+            <div class="content">{{ t("app.dictionary.formatHelp") }}</div>
+          </div>
+          <div class="ts-input is-fluid">
+            <textarea id="custom-dictionary-entries" rows="12" spellcheck="false" v-model="dictionaryDraftText" :placeholder="t('app.dictionary.entriesPlaceholder')"></textarea>
+          </div>
+
+        </div>
+
+        <div class="ts-divider"></div>
+
+        <div class="ts-content is-padded">
+          <input ref="dictionaryImportInput" type="file" accept=".json,application/json" hidden @change="importDictionaries">
+          <div class="ts-grid is-spaced-between mobile:is-compact">
+            <div class="column ts-wrap mobile:is-compact">
+              <button class="ts-button is-secondary is-outlined is-start-icon" type="button" @click="openDictionaryImport">
+                <span class="ts-icon is-file-import-icon" aria-hidden="true"></span>{{ t("app.dictionary.action.import") }}
+              </button>
+              <button class="ts-button is-secondary is-outlined is-start-icon" type="button" :disabled="!savedDictionaries.length" @click="exportDictionaries">
+                <span class="ts-icon is-file-export-icon" aria-hidden="true"></span>{{ t("app.dictionary.action.export") }}
+              </button>
+            </div>
+            <div class="column ts-wrap mobile:is-compact">
+              <button class="ts-button" type="button" @click="applyCustomDictionary">{{ t("app.dictionary.action.apply") }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <footer class="ts-content is-center-aligned is-tertiary">
+      <div class="ts-text">EPUB 的簡繁轉換線上工具。支援檔案拖放，且選擇檔案後即刻開始轉換。另外，一切都在瀏覽器中直接進行，數秒內即可完成轉換。</div>
+      <div class="ts-text is-secondary">&copy; Stone App · <a href="https://github.com/stoneapptech/epub_convert">GitHub</a></div>
+    </footer>
+
+    <div class="theme-control">
+      <label class="ts-switch" id="theme-control" :aria-label="themeLabel" :title="themeLabel">
+        <input type="checkbox" id="theme-switch" v-model="darkMode" @change="saveTheme">
+        <span :class="['ts-icon', darkMode ? 'is-moon-icon' : 'is-sun-icon']" id="theme-icon" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div
+      ref="snackbarContainer"
+      class="snackbar-container"
+      aria-live="assertive"
+      popover="manual"
+      @pointerdown.stop
+      @mousedown.stop
+      @click.stop
+    >
+      <div v-if="snackbarVisible" class="ts-snackbar" id="snackbar">
+        <div class="content" id="snackbar-content">{{ snackbarMessage }}</div>
+        <button
+          class="close"
+          id="snackbar-close"
+          type="button"
+          :aria-label="t('app.snackbar.close')"
+          @pointerup.stop.prevent="hideSnackbar"
+          @click.stop.prevent="hideSnackbar"
+        ></button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

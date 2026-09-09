@@ -1,0 +1,433 @@
+// Lightweight OpenCC WASM wrapper with opencc-js compatible API.
+// 假定包内目录结构：
+//  - dist/opencc-wasm.js|.wasm
+//  - data/config/*.json
+//  - data/dict/*.ocd2
+
+// Optional Node helpers (guarded for browser)
+let fsMod = null;
+let fileURLToPathFn = null;
+const hasNode = typeof process !== "undefined" && !!process.versions?.node;
+if (hasNode) {
+  fsMod = await import("node:fs");
+  ({ fileURLToPath: fileURLToPathFn } = await import("node:url"));
+}
+
+const BASE_URL = new URL("../", import.meta.url);
+
+const readFileText = (url) => {
+  if (!fsMod || !fileURLToPathFn) throw new Error("fs not available in this environment");
+  const path = fileURLToPathFn(url);
+  return fsMod.readFileSync(path, "utf-8");
+};
+
+const readFileBuffer = (url) => {
+  if (!fsMod || !fileURLToPathFn) throw new Error("fs not available in this environment");
+  const path = fileURLToPathFn(url);
+  return fsMod.readFileSync(path);
+};
+
+// 预设映射：from -> to -> config 文件名
+const CONFIG_MAP = {
+  cn: {
+    t: "s2t.json",
+    tw: "s2tw.json",
+    twp: "s2twp.json",  // 台湾惯用词
+    hk: "s2hk.json",
+    hkp: "s2hkp.json",  // 香港惯用词
+    cn: null
+  },
+  tw: {
+    cn: "tw2s.json",
+    s: "tw2s.json",     // 别名
+    sp: "tw2sp.json",   // 简体惯用词
+    t: "tw2t.json",
+    tw: null
+  },
+  hk: {
+    cn: "hk2s.json",
+    s: "hk2s.json",     // 别名
+    sp: "hk2sp.json",   // 简体惯用词
+    t: "hk2t.json",
+    hk: null
+  },
+  t: {
+    cn: "t2s.json",
+    s: "t2s.json",      // 别名
+    tw: "t2tw.json",
+    hk: "t2hk.json",
+    jp: "t2jp.json",
+    t: null
+  },
+  jp: {
+    t: "jp2t.json"
+  },
+};
+
+// 缓存已加载的配置/字典与打开的句柄，避免重复加载和重复构建
+const loadedConfigs = new Set();
+const loadedDicts = new Set();
+const loadedResources = new Set();
+const handles = new Map();
+let modulePromise = null;
+let api = null;
+
+async function getModule() {
+  if (modulePromise) return modulePromise;
+
+  // 1) 先确定包根目录（一定要以 / 结尾）
+  const pkgBase = new URL("./", import.meta.url);
+  // 如果这段代码在 HTML inline script 里，没有 import.meta.url，那就用绝对路径：
+  // const pkgBase = new URL("/vendor/opencc-wasm/", window.location.origin);
+
+  // 2) import glue (from build/ for testing/development)
+  const glueUrl = new URL("./opencc-wasm.js", import.meta.url);
+
+  const { default: create } = await import(glueUrl.href);
+
+  // 3) locateFile looks for wasm in same directory as glue code
+  modulePromise = create({
+    locateFile: (p) => new URL(p, import.meta.url).href
+  });
+
+  return modulePromise;
+}
+
+async function getApi() {
+  const mod = await getModule();
+  if (!api) {
+    api = {
+      create: mod.cwrap("opencc_create", "number", ["string"]),
+      convert: mod.cwrap("opencc_convert", "string", ["number", "string"]),
+      inspect: mod.cwrap("opencc_inspect", "string", ["number", "string"]),
+      candidates: mod.cwrap("opencc_convert_candidates", "string", ["number", "string"]),
+      ambiguities: mod.cwrap("opencc_convert_with_ambiguities", "string", ["number", "string"]),
+      destroy: mod.cwrap("opencc_destroy", null, ["number"]),
+    };
+  }
+  return { mod, api };
+}
+
+function ensureParentDir(mod, filePath) {
+  const idx = filePath.lastIndexOf("/");
+  if (idx > 0) {
+    const dir = filePath.slice(0, idx);
+    mod.FS.mkdirTree(dir);
+  }
+}
+
+function collectOcd2Files(node, acc) {
+  if (!node || typeof node !== "object") return;
+  if (node.type === "ocd2" && node.file) acc.add(node.file);
+  if (node.type === "group" && Array.isArray(node.dicts)) {
+    node.dicts.forEach((d) => collectOcd2Files(d, acc));
+  }
+}
+
+// Tofu-risk dictionary filtering, mirroring node/opencc.js. Dictionaries marked
+// `may_output_tofu` are stripped when the caller opts out (includeTofuRiskDictionaries
+// === false). The default keeps them, matching the official OpenCC library APIs
+// (node/opencc.js and the Python binding both default to include).
+function filterTofuRiskDicts(dict, includeTofuRiskDictionaries) {
+  if (!dict) return null;
+  if (dict.type === "inline") {
+    return dict;
+  }
+  if (dict.may_output_tofu && !includeTofuRiskDictionaries) {
+    return null;
+  }
+  if (dict.type === "group" && Array.isArray(dict.dicts)) {
+    dict.dicts = dict.dicts
+      .map((d) => filterTofuRiskDicts(d, includeTofuRiskDictionaries))
+      .filter(Boolean);
+    if (dict.dicts.length === 0) {
+      return null;
+    }
+  }
+  return dict;
+}
+
+function filterTofuRiskConversionChain(config, includeTofuRiskDictionaries) {
+  if (!Array.isArray(config.conversion_chain)) return;
+  config.conversion_chain = config.conversion_chain
+    .map((step) => {
+      if (!step || !step.dict) return step;
+      step.dict = filterTofuRiskDicts(step.dict, includeTofuRiskDictionaries);
+      return step.dict ? step : null;
+    })
+    .filter(Boolean);
+}
+
+function collectSegmentationResources(segmentation, acc) {
+  if (!segmentation || typeof segmentation !== "object") return;
+  const resources = segmentation.resources;
+  if (!resources || typeof resources !== "object") return;
+  Object.values(resources).forEach((value) => {
+    if (typeof value === "string" && value) {
+      acc.add(value);
+    }
+  });
+  if (segmentation.type === "jieba") {
+    acc.add("jieba_dict/idf.utf8");
+    acc.add("jieba_dict/stop_words.utf8");
+  }
+}
+
+async function fetchText(url) {
+  if (url.protocol === "file:") {
+    return readFileText(url);
+  }
+  const resp = await fetch(url.href);
+  if (!resp.ok) throw new Error(`Fetch ${url} failed: ${resp.status}`);
+  return resp.text();
+}
+
+async function fetchBuffer(url) {
+  if (url.protocol === "file:") {
+    return new Uint8Array(readFileBuffer(url));
+  }
+  const resp = await fetch(url.href);
+  if (!resp.ok) throw new Error(`Fetch ${url} failed: ${resp.status}`);
+  return new Uint8Array(await resp.arrayBuffer());
+}
+
+async function ensureConfig(configName, includeTofuRiskDictionaries = true) {
+  const cacheKey = `${configName}::tofu=${includeTofuRiskDictionaries}`;
+  if (handles.has(cacheKey)) return handles.get(cacheKey);
+  const { mod, api: apiFns } = await getApi();
+  mod.FS.mkdirTree("/data/config");
+  mod.FS.mkdirTree("/data/dict");
+  const cfgUrl = new URL(`./data/config/${configName}`, BASE_URL);
+  const cfgJson = JSON.parse(await fetchText(cfgUrl));
+
+  if (!includeTofuRiskDictionaries) {
+    filterTofuRiskConversionChain(cfgJson, includeTofuRiskDictionaries);
+  }
+
+  const dicts = new Set();
+  const resources = new Set();
+  if (Array.isArray(cfgJson.normalization)) {
+    cfgJson.normalization.forEach((item) => collectOcd2Files(item?.dict, dicts));
+  }
+  collectOcd2Files(cfgJson.segmentation?.dict, dicts);
+  collectSegmentationResources(cfgJson.segmentation, resources);
+  if (Array.isArray(cfgJson.conversion_chain)) {
+    cfgJson.conversion_chain.forEach((item) => collectOcd2Files(item?.dict, dicts));
+  }
+  for (const file of dicts) {
+    if (loadedDicts.has(file)) continue; // 避免重复加载同一字典
+    const dictUrl = new URL(`./data/dict/${file}`, BASE_URL);
+    const buf = await fetchBuffer(dictUrl);
+    const dictPath = `/data/dict/${file}`;
+    ensureParentDir(mod, dictPath);
+    mod.FS.writeFile(dictPath, buf);
+    loadedDicts.add(file);
+  }
+  for (const file of resources) {
+    if (loadedResources.has(file)) continue;
+    const resourceUrl = new URL(`./data/${file}`, BASE_URL);
+    const buf = await fetchBuffer(resourceUrl);
+    const resourcePath = `/data/${file}`;
+    ensureParentDir(mod, resourcePath);
+    mod.FS.writeFile(resourcePath, buf);
+    loadedResources.add(file);
+  }
+  // 重写配置中的 ocd2 路径到 /data/dict 下
+  const patchPaths = (node) => {
+    if (!node || typeof node !== "object") return;
+    if (node.type === "ocd2" && node.file) {
+      node.file = `/data/dict/${node.file}`;
+    }
+    if (node.type === "group" && Array.isArray(node.dicts)) {
+      node.dicts.forEach(patchPaths);
+    }
+  };
+  if (Array.isArray(cfgJson.normalization)) {
+    cfgJson.normalization.forEach((item) => patchPaths(item?.dict));
+  }
+  patchPaths(cfgJson.segmentation?.dict);
+  if (Array.isArray(cfgJson.conversion_chain)) {
+    cfgJson.conversion_chain.forEach((item) => patchPaths(item?.dict));
+  }
+  // Write include/skip variants to distinct paths so both can coexist in the VFS.
+  const vfsConfigName = includeTofuRiskDictionaries
+    ? configName
+    : `notofu.${configName}`;
+  mod.FS.writeFile(`/data/config/${vfsConfigName}`, JSON.stringify(cfgJson));
+  loadedConfigs.add(vfsConfigName);
+
+  const handle = apiFns.create(`/data/config/${vfsConfigName}`);
+  if (!handle || handle < 0) {
+    throw new Error(`opencc_create failed for ${configName}`);
+  }
+  handles.set(cacheKey, handle);
+  return handle;
+}
+
+function resolveConfig(from, to) {
+  const f = (from || "").toLowerCase();
+  const t = (to || "").toLowerCase();
+  const m = CONFIG_MAP[f];
+  if (!m || !(t in m)) {
+    throw new Error(`Unsupported conversion from '${from}' to '${to}'`);
+  }
+  return m[t]; // may be null for identical locale (no-op)
+}
+
+function createConverter({ from, to, config, includeTofuRiskDictionaries }) {
+  // Support direct config name (e.g., "s2twp.json" or "s2twp")
+  let configName;
+
+  if (config) {
+    // Direct config parameter takes priority
+    configName = config.endsWith('.json') ? config : `${config}.json`;
+  } else if (from && to) {
+    // Legacy from/to parameters
+    configName = resolveConfig(from, to);
+  } else {
+    throw new Error('Either "config" or both "from" and "to" must be specified');
+  }
+
+  const includeTofu = includeTofuRiskDictionaries !== false;
+
+  return async (text) => {
+    if (configName === null) return text; // no-op
+    const handle = await ensureConfig(configName, includeTofu);
+    const { api: apiFns } = await getApi();
+    return apiFns.convert(handle, text);
+  };
+}
+
+function createInspector({ from, to, config, includeTofuRiskDictionaries }) {
+  let configName;
+
+  if (config) {
+    configName = config.endsWith(".json") ? config : `${config}.json`;
+  } else if (from && to) {
+    configName = resolveConfig(from, to);
+  } else {
+    throw new Error('Either "config" or both "from" and "to" must be specified');
+  }
+
+  const includeTofu = includeTofuRiskDictionaries !== false;
+
+  return async (text) => {
+    if (configName === null) {
+      return {
+        input: text,
+        segments: text.length === 0 ? [] : [text],
+        stages: [],
+        output: text,
+      };
+    }
+    const handle = await ensureConfig(configName, includeTofu);
+    const { api: apiFns } = await getApi();
+    return JSON.parse(apiFns.inspect(handle, text));
+  };
+}
+
+function createCandidatesFn({ from, to, config, includeTofuRiskDictionaries }) {
+  let configName;
+
+  if (config) {
+    configName = config.endsWith(".json") ? config : `${config}.json`;
+  } else if (from && to) {
+    configName = resolveConfig(from, to);
+  } else {
+    throw new Error('Either "config" or both "from" and "to" must be specified');
+  }
+
+  const includeTofu = includeTofuRiskDictionaries !== false;
+
+  // Enumerates every candidate conversion of a single word (e.g. all
+  // traditional variants of a simplified character), intended for input
+  // method candidate lists. Unlike the converter itself, this treats `word`
+  // as one indivisible word, not arbitrary multi-word text.
+  return async (word) => {
+    if (configName === null) return [word];
+    const handle = await ensureConfig(configName, includeTofu);
+    const { api: apiFns } = await getApi();
+    return JSON.parse(apiFns.candidates(handle, word));
+  };
+}
+
+function createAmbiguitiesFn({ from, to, config, includeTofuRiskDictionaries }) {
+  let configName;
+
+  if (config) {
+    configName = config.endsWith(".json") ? config : `${config}.json`;
+  } else if (from && to) {
+    configName = resolveConfig(from, to);
+  } else {
+    throw new Error('Either "config" or both "from" and "to" must be specified');
+  }
+
+  const includeTofu = includeTofuRiskDictionaries !== false;
+
+  return async (text) => {
+    if (configName === null) {
+      return [{ lit: text }];
+    }
+    const handle = await ensureConfig(configName, includeTofu);
+    const { api: apiFns } = await getApi();
+    return JSON.parse(apiFns.ambiguities(handle, text));
+  };
+}
+
+function CustomConverter(dictOrString) {
+  let pairs = [];
+  if (typeof dictOrString === "string") {
+    pairs = dictOrString
+      .split("|")
+      .map((seg) => seg.trim())
+      .filter(Boolean)
+      .map((seg) => seg.split(/\s+/))
+      .filter((arr) => arr.length >= 2)
+      .map(([a, b]) => [a, b]);
+  } else if (Array.isArray(dictOrString)) {
+    pairs = dictOrString;
+  }
+  // 按键长度降序，保证长词优先
+  pairs.sort((a, b) => b[0].length - a[0].length);
+  return (text) => {
+    let out = text;
+    for (const [src, dst] of pairs) {
+      out = out.split(src).join(dst);
+    }
+    return out;
+  };
+}
+
+function ConverterFactory(fromLocale, toLocale, extraDicts = []) {
+  const conv = createConverter({ from: fromLocale, to: toLocale });
+  const extras = extraDicts.map((d) => CustomConverter(d));
+  return async (text) => {
+    let result = await conv(text);
+    extras.forEach((fn) => {
+      result = fn(result);
+    });
+    return result;
+  };
+}
+
+export const OpenCC = {
+  Converter(opts) {
+    const fn = createConverter(opts);
+    const inspect = createInspector(opts);
+    const candidates = createCandidatesFn(opts);
+    const ambiguities = createAmbiguitiesFn(opts);
+    const converter = (text) => fn(text);
+    converter.inspect = (text) => inspect(text);
+    converter.candidates = (word) => candidates(word);
+    converter.convertWithAmbiguities = (text) => ambiguities(text);
+    return converter;
+  },
+  CustomConverter,
+  ConverterFactory,
+  Locale: {
+    from: { cn: "cn", tw: "t", hk: "hk", jp: "jp", t: "t" },
+    to: { cn: "cn", tw: "tw", hk: "hk", jp: "jp", t: "t" },
+  },
+};
+
+export default OpenCC;

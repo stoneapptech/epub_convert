@@ -1,0 +1,29 @@
+{
+  "name": "Simplified Chinese to Traditional Chinese (The Chinese Government Standard)",
+  "normalization": [
+    {
+      "dict": {
+        "type": "ocd2",
+        "file": "CJK_Compatibility_Ideographs.ocd2"
+      }
+    }
+  ],
+  "conversion_chain": [
+    {
+      "dict": {
+        "type": "group",
+        "match_policy": "short_circuit",
+        "dicts": [
+          {
+            "type": "ocd2",
+            "file": "cngov/STPhrases.ocd2"
+          },
+          {
+            "type": "ocd2",
+            "file": "cngov/STCharacters.ocd2"
+          }
+        ]
+      }
+    }
+  ]
+}

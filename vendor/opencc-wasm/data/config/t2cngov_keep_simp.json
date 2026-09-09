@@ -1,0 +1,29 @@
+{
+  "name": "Traditional Chinese to Traditional Chinese (Chinese Government standard) with Simplified Chinese remaining unchanged",
+  "normalization": [
+    {
+      "dict": {
+        "type": "ocd2",
+        "file": "CJK_Compatibility_Ideographs.ocd2"
+      }
+    }
+  ],
+  "conversion_chain": [
+    {
+      "dict": {
+        "type": "group",
+        "match_policy": "short_circuit",
+        "dicts": [
+          {
+            "type": "ocd2",
+            "file": "cngov/TGPhrases.ocd2"
+          },
+          {
+            "type": "ocd2",
+            "file": "cngov/TGCharacters_keep_simp.ocd2"
+          }
+        ]
+      }
+    }
+  ]
+}

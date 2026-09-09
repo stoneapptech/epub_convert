@@ -1,0 +1,48 @@
+{
+  "name": "epub-convert",
+  "version": "1.0.0",
+  "description": "Convert EPUB files between Traditional and Simplified Chinese with OpenCC WASM.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stoneapptech/epub_convert.git"
+  },
+  "homepage": "https://app.stoneapp.tech/#epubconvert",
+  "bugs": "https://github.com/stoneapptech/epub_convert/issues",
+  "type": "module",
+  "bin": {
+    "epub-convert": "scripts/convert.mjs"
+  },
+  "files": [
+    "scripts/cli-progress.mjs",
+    "scripts/convert.mjs",
+    "scripts/node-convert-worker.mjs",
+    "static/conversion-runtime.js",
+    "static/custom-dictionaries.js",
+    "static/epub-converter.js",
+    "static/opencc-config.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "convert": "node scripts/convert.mjs",
+    "test:converter": "node --test tests/epub-converter.test.mjs",
+    "test:cli": "node --test tests/node-cli.test.mjs",
+    "test:dictionaries": "node --test tests/custom-dictionaries.test.mjs",
+    "test:i18n": "node --test tests/i18n.test.mjs",
+    "test:pwa": "node --test tests/pwa.test.mjs",
+    "test:ui-template": "node tests/validate-ui-template.cjs",
+    "vendor:update": "node scripts/update-vendor.mjs",
+    "vendor:check": "node scripts/update-vendor.mjs --check"
+  },
+  "dependencies": {
+    "@zip.js/zip.js": "2.8.60",
+    "opencc-wasm": "0.13.1",
+    "string-width": "7.2.0"
+  },
+  "devDependencies": {
+    "tocas": "5.0.3",
+    "vue": "3.5.42"
+  }
+}
