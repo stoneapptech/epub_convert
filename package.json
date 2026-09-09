@@ -1,6 +1,6 @@
 {
   "name": "epub-convert",
-  "version": "1.0.0",
+  "version": "1.0.1+npx",
   "description": "Convert EPUB files between Traditional and Simplified Chinese with OpenCC WASM.",
   "license": "MIT",
   "repository": {
