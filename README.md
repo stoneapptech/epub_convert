@@ -40,13 +40,13 @@ npm ci
 可將檔名作為參數，預設會轉換到原檔案相同的資料夾:
 
 ```
-npm run convert -- --mode s2twp --jieba --jobs 4 book1.epub book2.epub
+npx epub-convert --mode s2twp --jieba --jobs 4 book1.epub book2.epub
 ```
 
 也可以指定資料夾，會轉換該資料夾第一層的所有 `.epub` 檔案:
 
 ```
-npm run convert -- --mode t2s --jobs 2 --output-dir converted books/
+npx epub-convert --mode t2s --jobs 2 --output-dir converted books/
 ```
 
 使用 `--dictionary`（或 `-d`）套用自訂詞典。
@@ -54,10 +54,10 @@ npm run convert -- --mode t2s --jobs 2 --output-dir converted books/
 另外，選項可重複使用以合併多個檔案:
 
 ```
-npm run convert -- -d terms.txt --dictionary names.json books/
+npx epub-convert -d terms.txt --dictionary names.json books/
 ```
 
-其他參數的完整說明，可以參閱 `npm run convert -- --help`。
+其他參數的完整說明，可以參閱 `npx epub-convert --help`。
 
 ### 更新第三方套件
 ```
