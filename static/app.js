@@ -316,17 +316,17 @@ createApp({
     this.cleanup();
   },
 
-    methods: {
-        toggleTooltip(event) {
-            const target = event.currentTarget;
-            if (target.hasAttribute("aria-describedby")) {
-                target.blur();
-                return;
-            }
-            target.focus({ preventScroll: true });
-        },
+  methods: {
+    toggleTooltip(event) {
+      const target = event.currentTarget;
+      if (target.hasAttribute("aria-describedby")) {
+        target.blur();
+        return;
+      }
+      target.focus({ preventScroll: true });
+    },
 
-        createWorker() {
+    createWorker() {
       worker = new Worker(new URL("./convert-worker.js", import.meta.url), { type: "module" });
       worker.addEventListener("message", this.handleWorkerMessage);
       worker.addEventListener("error", (event) => {
